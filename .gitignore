@@ -1,0 +1,8 @@
+docs/
+node_modules/
+dist/
+wasm/target/
+src/wasm-pkg/
+test-results/
+playwright-report/
+.DS_Store

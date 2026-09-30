@@ -1,0 +1,42 @@
+{
+  "name": "mdreader",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "wasm": "sh wasm/build.sh",
+    "dev": "vite",
+    "build": "npm run wasm && vite build",
+    "preview": "vite preview --port 4173",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tsconfig/svelte": "^5.0.8",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.1"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/language-data": "^6.5.2",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@lezer/highlight": "^1.2.5",
+    "@lucide/svelte": "^1.49.0",
+    "codemirror": "^6.0.2",
+    "dompurify": "^3.4.16",
+    "fflate": "^0.8.3",
+    "highlight.js": "^11.12.0",
+    "katex": "^0.18.9",
+    "mermaid": "^12.0.0"
+  }
+}
