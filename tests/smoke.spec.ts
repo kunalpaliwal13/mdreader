@@ -51,6 +51,12 @@ test('welcome doc renders every syntax', async ({ page }) => {
   await expect(md.locator('sub')).toHaveText('2');
   await expect(md.locator('details summary')).toHaveText('Click to expand');
   await expect(md).toContainText('🚀');
+  // heading ids survive sanitizing (bare "images" would be stripped as DOM clobbering)
+  await expect(md.locator('h2', { hasText: 'Images' })).toHaveAttribute('id', 'user-content-images');
+  await md.locator('.toc a', { hasText: 'Images' }).click();
+  await expect(md.locator('h2', { hasText: 'Images' })).toBeInViewport();
+  await md.getByRole('link', { name: 'relative link' }).click();
+  await expect(md.locator('h2', { hasText: 'Tables' })).toBeInViewport();
   await shot(page, 'welcome');
 });
 
@@ -199,7 +205,10 @@ test('import files + zip, paste image, export zip, pdf', async ({ page }) => {
     const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
     const dt = new DataTransfer();
     dt.items.add(new File([png], 'dot.png', { type: 'image/png' }));
-    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    // Firefox strips files from synthetic ClipboardEvent init; attach the DataTransfer directly
+    const e = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(e, 'clipboardData', { value: dt });
+    el.dispatchEvent(e);
   });
   await expect(page.locator('.cm-content')).toContainText('![dot](assets/dot.png)');
   await row(page, 'sub/assets').click();

@@ -9,9 +9,15 @@ export type Parsed = { html: string; front_matter: string | null; headings: Head
 const worker = new Worker(new URL('./render.worker.ts', import.meta.url), { type: 'module' });
 const pending = new Map<number, (p: Parsed) => void>();
 let seq = 0;
+const failed = (msg: string): Parsed => ({ html: `<pre class="render-error">${msg}</pre>`, front_matter: null, headings: [] });
+worker.onerror = (e) => {
+  // e.g. the wasm failed to load: resolve everything waiting instead of hanging the preview
+  for (const resolve of pending.values()) resolve(failed(`Renderer failed to start: ${e.message ?? 'unknown error'}`));
+  pending.clear();
+};
 worker.onmessage = (e) => {
   const { id, error, ...parsed } = e.data;
-  pending.get(id)?.(error ? { html: `<pre>${error}</pre>`, front_matter: null, headings: [] } : parsed);
+  pending.get(id)?.(error ? failed(escapeHtml(error)) : parsed);
   pending.delete(id);
 };
 
@@ -114,7 +120,7 @@ function toc(headings: Heading[]): HTMLElement {
   const min = Math.min(...headings.map((h) => h.level));
   for (const h of headings) {
     const a = document.createElement('a');
-    a.href = '#' + h.id;
+    a.href = '#user-content-' + h.id;
     a.textContent = h.text;
     a.style.paddingLeft = `${(h.level - min) * 14}px`;
     nav.append(a);
@@ -133,7 +139,7 @@ export async function renderToElement(md: string, opts: RenderOpts): Promise<{ e
   const parsed = await parse(md);
   const el = document.createElement('div');
   el.innerHTML = DOMPurify.sanitize(parsed.html, {
-    ADD_ATTR: ['lang', 'data-sourcepos', 'data-math-style', 'target'],
+    ADD_ATTR: ['lang', 'data-sourcepos', 'data-math-style'],
   });
 
   if (parsed.front_matter) el.prepend(frontMatterCard(parsed.front_matter));
@@ -198,9 +204,15 @@ export async function renderToElement(md: string, opts: RenderOpts): Promise<{ e
     img.loading = 'lazy';
   }
 
-  // external links open in a new tab
+  // external links open in a new tab; #frag points at the prefixed heading id when that's what exists
   for (const a of el.querySelectorAll('a[href]')) {
-    if (/^https?:/i.test(a.getAttribute('href')!)) {
+    const href = a.getAttribute('href')!;
+    if (href.length > 1 && href.startsWith('#') && !href.startsWith('#user-content-')) {
+      const id = decodeURIComponent(href.slice(1));
+      if (!el.querySelector(`[id="${CSS.escape(id)}"]`) && el.querySelector(`[id="user-content-${CSS.escape(id)}"]`))
+        a.setAttribute('href', '#user-content-' + id);
+    }
+    if (/^https?:/i.test(href)) {
       a.setAttribute('target', '_blank');
       a.setAttribute('rel', 'noopener noreferrer');
     }

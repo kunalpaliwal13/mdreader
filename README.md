@@ -15,6 +15,6 @@ npm install
 npm run wasm      # build the parser into src/wasm-pkg/
 npm run dev
 npm run build     # wasm + production build into dist/
-npx playwright install chromium webkit
-npm test          # smoke tests against dist/ (Chromium + WebKit)
+npx playwright install chromium webkit firefox
+npm test          # smoke tests against dist/ (Chromium + WebKit + Firefox)
 ```

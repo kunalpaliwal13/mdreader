@@ -88,7 +88,7 @@
       { label: 'Duplicate', icon: Copy, action: () => app.duplicate(n.path) },
       n.kind === 'dir'
         ? { label: 'Export as ZIP', icon: Archive, action: () => exportZip(n.path) }
-        : { label: 'Download', icon: FileDown, action: () => app.open(n.path, false).then(() => exportMd(n.path)) },
+        : { label: 'Download', icon: FileDown, action: () => exportMd(n.path) },
       { sep: true },
       { label: 'Move to trash', icon: Trash, danger: true, action: () => app.remove([n.path]), kbd: '⌫' },
     ];

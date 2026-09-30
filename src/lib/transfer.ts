@@ -94,8 +94,10 @@ function download(name: string, data: BlobPart, type: string) {
 
 const stem = (p: string) => basename(p).replace(/\.[^.]+$/, '');
 
-export function exportMd(path: string) {
-  download(basename(path), app.texts[path] ?? '', 'text/markdown');
+export async function exportMd(path: string) {
+  await app.flush(path);
+  const data = path in app.texts ? app.texts[path] : await fs.readBytes(path);
+  download(basename(path), data, isMarkdown(path) ? 'text/markdown' : 'application/octet-stream');
 }
 
 async function toDataUrl(src: string): Promise<string> {
@@ -154,7 +156,8 @@ export async function exportHtml(path: string) {
 export async function exportPdf(path: string) {
   const html = await standaloneHtml(path, true);
   const frame = Object.assign(document.createElement('iframe'), { srcdoc: html });
-  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  // real size offscreen: Firefox/Safari can print blank pages from 0×0 or hidden frames
+  frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;height:600px;border:0';
   document.body.append(frame);
   frame.onload = async () => {
     const w = frame.contentWindow!;

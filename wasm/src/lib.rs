@@ -39,7 +39,9 @@ fn options() -> Options<'static> {
     e.spoiler = true;
     e.highlight = true;
     e.insert = true;
-    e.header_id_prefix = Some(String::new());
+    // GitHub-style prefix: bare ids like "images" or "title" get stripped by DOMPurify's clobbering guard
+    e.header_id_prefix = Some("user-content-".into());
+    e.header_id_prefix_in_href = true;
     let r = &mut o.render;
     r.r#unsafe = true; // raw HTML passes through; DOMPurify sanitizes in JS
     r.github_pre_lang = true;
@@ -93,6 +95,7 @@ mod tests {
         let out = render("---\ntitle: Hi\n---\n# A b\n\n## A b\n\n$x^2$ :rocket: ==hl== ~~s~~\n\n> [!NOTE]\n> n\n\n```mermaid\ngraph TD\n```\n");
         assert!(out.contains(r#""front_matter":"title: Hi""#), "{out}");
         assert!(out.contains(r#""id":"a-b""#) && out.contains(r#""id":"a-b-1""#), "{out}");
+        assert!(out.contains(r#"id=\"user-content-a-b\""#), "{out}");
         assert!(out.contains("data-math-style"), "{out}");
         assert!(out.contains("🚀"), "{out}");
         assert!(out.contains("<mark"), "{out}");
