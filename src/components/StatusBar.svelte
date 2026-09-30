@@ -17,7 +17,7 @@
   <span class="save {app.saveState}"><i></i>{label[app.saveState]}</span>
   {#if app.active}
     <span class="spacer"></span>
-    {#if app.settings.mode !== 'preview'}<span>Ln {app.cursor.line}, Col {app.cursor.col}</span>{/if}
+    {#if app.mode !== 'preview' && !app.narrow}<span>Ln {app.cursor.line}, Col {app.cursor.col}</span>{/if}
     <span>{words.toLocaleString()} {words === 1 ? 'word' : 'words'}</span>
     {#if words}<span>{minutes} min read</span>{/if}
   {/if}

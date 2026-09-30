@@ -52,11 +52,17 @@ class App {
   cursor = $state({ line: 1, col: 1 });
 
   dark = $state(false);
+  /** Phone-width layout: no split view (two panes don't fit), sidebar as overlay. */
+  narrow = $state(typeof matchMedia !== 'undefined' && matchMedia('(max-width: 760px)').matches);
   /** Set by the mounted editor so external edits (preview checkboxes) keep undo history. */
   editHook: ((path: string, from: number, to: number, insert: string) => boolean) | null = null;
   onRemap: ((map: (p: string) => string) => void) | null = null;
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
+
+  get mode(): Mode {
+    return this.narrow && this.settings.mode === 'split' ? 'preview' : this.settings.mode;
+  }
 
   get activeText() {
     return this.active ? (this.texts[this.active] ?? '') : '';

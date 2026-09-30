@@ -16,6 +16,10 @@ markdown syntax rendered, style the rendering how they like, and export to md / 
 
 - Planning docs live in `docs/` (git-ignored): `docs/goals.md` holds goals + every settled decision,
   `docs/todo.md` tracks the current run. Update both as decisions are made and tasks finish.
+- `instruction.md` (how to run) and `completed.md` (finished milestones) are committed; update
+  `completed.md` at the end of every run.
+- Every push to `main` deploys to GitHub Pages (`.github/workflows/pages.yml`); layout must work on
+  phone, tablet and desktop.
 - Work in runs split into chunks; verify each run (kitchen-sink fixture + Playwright smoke on built
   `dist/`, Chromium + WebKit + Firefox) before handing over for user testing.
 - Think like a product manager before placing any control: the document is the product, chrome stays

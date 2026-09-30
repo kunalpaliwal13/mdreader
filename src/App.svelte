@@ -27,9 +27,12 @@
     document.title = app.active ? `${app.active.split('/').pop()} · mdreader` : 'mdreader';
   });
 
+  const narrowMq = matchMedia('(max-width: 760px)');
+  narrowMq.addEventListener('change', (e) => (app.narrow = e.matches));
+
   onMount(async () => {
-    // phones start with the document, not the tree
-    if (matchMedia('(max-width: 760px)').matches) app.settings.sidebar = false;
+    // phones and portrait tablets start with the document, not the tree
+    if (matchMedia('(max-width: 1024px)').matches) app.settings.sidebar = false;
     try {
       await app.init();
     } catch (err) {
@@ -50,8 +53,8 @@
       app.flush().then(() => app.active && app.notify('Saved'));
     } else if (e.key.toLowerCase() === 'e' && !e.shiftKey && app.active) {
       e.preventDefault();
-      const order: Mode[] = ['edit', 'split', 'preview'];
-      app.settings.mode = order[(order.indexOf(app.settings.mode) + 1) % 3];
+      const order: Mode[] = app.narrow ? ['edit', 'preview'] : ['edit', 'split', 'preview'];
+      app.settings.mode = order[(order.indexOf(app.mode) + 1) % order.length];
       app.saveSettings();
     }
   }
@@ -108,7 +111,7 @@
 
   <main>
     <Tabs />
-    <div class="content mode-{app.settings.mode}">
+    <div class="content mode-{app.mode}">
       {#if app.active}
         <div class="pane editor-pane"><Editor path={app.active} /></div>
         <div class="pane preview-pane"><Preview path={app.active} text={app.activeText} /></div>
@@ -131,6 +134,7 @@
 <style>
   .app {
     display: grid;
+    height: 100dvh;
     grid-template-columns: var(--side-w) minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
     height: 100%;
@@ -175,7 +179,5 @@
     .side { position: fixed; inset: 0 auto 0 0; width: min(300px, 85vw); z-index: 30; box-shadow: var(--shadow); }
     .resize { display: none; }
     .scrim { display: block; position: fixed; inset: 0; z-index: 29; background: rgb(0 0 0 / .3); }
-    .content.mode-split { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
-    .content.mode-split .editor-pane { border-right: 0; border-bottom: 1px solid var(--border); }
   }
 </style>

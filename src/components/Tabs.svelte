@@ -71,11 +71,11 @@
   {#if app.active}
     <div class="right">
       <div class="seg" role="radiogroup" aria-label="View mode">
-        {#each modes as m (m.id)}
+        {#each modes.filter((m) => !(app.narrow && m.id === 'split')) as m (m.id)}
           <button
-            class:on={app.settings.mode === m.id}
+            class:on={app.mode === m.id}
             role="radio"
-            aria-checked={app.settings.mode === m.id}
+            aria-checked={app.mode === m.id}
             title="{m.label} (⌘E cycles)"
             aria-label={m.label}
             onclick={() => setMode(m.id)}
@@ -133,4 +133,9 @@
   }
   .seg button:hover { color: var(--text); }
   .seg button.on { background: var(--bg-elevated); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / .1); }
+  @media (max-width: 760px) {
+    .tab { max-width: 150px; padding-left: 10px; }
+    .dir { display: none; }
+    .right { padding: 0 6px; gap: 2px; }
+  }
 </style>

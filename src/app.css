@@ -102,3 +102,16 @@ input { font: inherit; color: inherit; }
 
 /* scrollbars */
 * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+
+/* touch: bigger targets, 16px inputs (stops iOS focus-zoom), always-visible affordances */
+@media (pointer: coarse) {
+  .icon-btn { width: 34px; height: 34px; }
+  input, .cm-editor { font-size: 16px !important; }
+  .md pre .code-copy { opacity: 1; }
+  .md pre[data-lang]::after { display: none; }
+  .menu-item { height: 38px; }
+}
+@media (max-width: 760px) {
+  .cm-editor .cm-line { padding: 0 16px !important; }
+  .cm-editor .cm-content { padding-top: 20px !important; }
+}

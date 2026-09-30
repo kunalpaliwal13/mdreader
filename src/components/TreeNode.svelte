@@ -120,4 +120,5 @@
     background: var(--bg); outline: none;
   }
   @media (hover: none) { .more { opacity: 1; } }
+  @media (pointer: coarse) { .row { height: 38px; } .more { width: 30px; height: 30px; } }
 </style>
