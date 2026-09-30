@@ -2,8 +2,11 @@
 
 ## Use it online
 
-https://kunalpaliwal13.github.io/mdreader/ — rebuilt and redeployed automatically on every push to `main`
-(`.github/workflows/pages.yml`). Everything runs in your browser; files are stored in the browser's
+- https://sandptel.github.io/mdreader/ (fork `sandptel/mdreader`)
+- https://kunalpaliwal13.github.io/mdreader/ (upstream — live once Pages is enabled there: Settings → Pages →
+  Source: GitHub Actions)
+
+Each repo rebuilds and redeploys automatically on every push to its `main` (`.github/workflows/pages.yml`). Everything runs in your browser; files are stored in the browser's
 private file system (OPFS) and never leave your device.
 
 ## Run locally
