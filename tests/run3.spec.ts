@@ -11,6 +11,9 @@ const bg = (page: Page, sel: string) => page.locator(sel).first().evaluate((el) 
 test('base16 scheme recolors app + editor, not the preview', async ({ page }) => {
   await ready(page);
   await page.getByRole('button', { name: 'Switch to dark mode' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  // dark preview background (wait out the theme view transition)
+  await expect.poll(() => bg(page, '.preview-pane .scroller')).toBe('rgb(15, 15, 17)');
   const previewBefore = await bg(page, '.preview-pane .scroller');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: /Default/ }).click();
