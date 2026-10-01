@@ -25,7 +25,6 @@
   let schemesOpen = $state(false);
   const mode = $derived(app.dark ? 'dark' : 'light');
   const current = $derived(SCHEMES.find((x) => x.id === s.scheme) ?? SCHEMES[0]);
-  const preset = $derived(presets.find((p) => p.id === s.preset) ?? presets[0]);
 
   // one slider, scoped to editor / both / preview (Figma-style linked value)
   const width = $derived(s.widthScope === 'editor' ? s.editorWidth : s.width);
@@ -50,13 +49,14 @@
 <Panel title="Appearance" {onclose}>
   <div class="group">Text</div>
 
-  <div class="row">
-    <span class="label">Preview style</span>
-    <div class="stepper" role="group" aria-label="Preview style">
-      <button aria-label="Previous preview style" onclick={() => set('preset', step(presets, preset, -1).id)}><ChevronLeft size={13} /></button>
-      <span class="val p-{preset.id}">{preset.label}</span>
-      <button aria-label="Next preview style" onclick={() => set('preset', step(presets, preset, 1).id)}><ChevronRight size={13} /></button>
-    </div>
+  <div class="row"><span class="label">Preview style</span></div>
+  <div class="presets" role="radiogroup" aria-label="Preview style">
+    {#each presets as p (p.id)}
+      <button class="preset p-{p.id}" class:on={s.preset === p.id} role="radio" aria-checked={s.preset === p.id} aria-label={p.label} onclick={() => set('preset', p.id)}>
+        <span class="sample">Aa</span>
+        <span>{p.label}</span>
+      </button>
+    {/each}
   </div>
 
   <div class="row">
@@ -148,8 +148,22 @@
     display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 104px; height: 24px; padding: 0 8px;
     border-radius: 5px; background: var(--bg-elevated); color: var(--text); font-size: 11.5px; box-shadow: 0 1px 2px rgb(0 0 0 / .1);
   }
-  .val.p-academic, .val.p-sepia { font-family: 'Iowan Old Style', Charter, Georgia, serif; font-size: 12.5px; }
-  .val.p-minimal { font-weight: 300; }
+  /* preview styles: a type sample per preset (each tile shows its own typography) */
+  .presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: -2px 0 8px; }
+  .preset {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 6px; border: 1px solid var(--border);
+    border-radius: 7px; background: var(--bg); color: var(--text-muted); cursor: pointer; font-size: 10.5px; min-width: 0;
+  }
+  .preset > span:last-child { max-width: 100%; padding: 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .preset:hover { border-color: var(--border-strong); color: var(--text); }
+  .preset.on { border-color: var(--accent); color: var(--text); box-shadow: 0 0 0 1px var(--accent); }
+  .sample { font-size: 18px; line-height: 1; color: var(--text); font-family: 'Inter Variable', Inter, sans-serif; }
+  .p-academic .sample, .p-sepia .sample { font-family: 'Iowan Old Style', Charter, Georgia, serif; }
+  .p-minimal .sample { font-weight: 300; }
+  .p-sepia { background: #f8f1e3; color: #7a6650; }
+  .p-sepia .sample { color: #3b2f22; }
+  :global([data-theme='dark']) .p-sepia { background: #1e1913; color: #a8977f; }
+  :global([data-theme='dark']) .p-sepia .sample { color: #e8dcc8; }
 
   .slider { display: flex; align-items: center; gap: 8px; flex: 1; max-width: 150px; }
   .slider.full { max-width: none; margin: -2px 0 8px; }

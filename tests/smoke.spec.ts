@@ -133,8 +133,9 @@ test('modes, theme, export', async ({ page }) => {
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Dark', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  // GitHub -> Academic -> Minimal -> Sepia via the stepper
-  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Next preview style' }).click();
+  // preview style tiles (each shows its own typography)
+  await page.getByRole('radio', { name: 'Sepia' }).click();
+  await expect(page.getByRole('radio', { name: 'Sepia' })).toHaveAttribute('aria-checked', 'true');
   await expect(preview(page)).toHaveClass(/preset-sepia/);
   await shot(page, 'dark-sepia');
   // app shell never scrolls as a whole; only the panes do
