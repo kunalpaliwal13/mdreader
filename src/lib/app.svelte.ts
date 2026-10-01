@@ -19,10 +19,12 @@ export type Settings = {
   editMode: 'edit' | 'split';
   /** editor share of the split view, in percent */
   split: number;
+  /** max width of the editor's text column, px */
+  editorWidth: number;
 };
 export type SidebarView = 'files' | 'search' | 'outline';
 
-const DEFAULTS: Settings = { theme: 'system', preset: 'github', font: 'preset', size: 16, width: 760, mode: 'split', sidebar: true, sidebarWidth: 260, editMode: 'split', split: 50 };
+const DEFAULTS: Settings = { theme: 'system', preset: 'github', font: 'preset', size: 16, width: 760, mode: 'split', sidebar: true, sidebarWidth: 260, editMode: 'split', split: 50, editorWidth: 760 };
 
 /** Animate a DOM-changing state update with the View Transitions API where available. */
 export function transition(update: () => void) {

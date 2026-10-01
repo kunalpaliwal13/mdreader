@@ -29,8 +29,10 @@
     </div>
   </div>
 
+  <div class="group">Preview</div>
+
   <div class="field">
-    <span class="label">Preview style</span>
+    <span class="label">Style</span>
     <div class="presets">
       {#each presets as p (p.id)}
         <button class="preset p-{p.id}" class:on={s.preset === p.id} onclick={() => set('preset', p.id)}>
@@ -57,11 +59,19 @@
 
   <div class="field">
     <span class="label">Line width <em>{s.width}px</em></span>
-    <input type="range" min="560" max="1200" step="20" value={s.width} oninput={(e) => set('width', +(e.currentTarget as HTMLInputElement).value)} />
+    <input type="range" min="560" max="1200" step="20" value={s.width} aria-label="Preview line width" oninput={(e) => set('width', +(e.currentTarget as HTMLInputElement).value)} />
+  </div>
+
+  <div class="group">Editor</div>
+
+  <div class="field">
+    <span class="label">Line width <em>{s.editorWidth}px</em></span>
+    <input type="range" min="480" max="1400" step="20" value={s.editorWidth} aria-label="Editor line width" oninput={(e) => set('editorWidth', +(e.currentTarget as HTMLInputElement).value)} />
   </div>
 </Panel>
 
 <style>
+  .group { margin: 4px 0 8px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 11px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; }
   .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
   .field:last-child { margin-bottom: 0; }
   .label { font-size: 11.5px; color: var(--text-muted); font-weight: 500; display: flex; justify-content: space-between; }

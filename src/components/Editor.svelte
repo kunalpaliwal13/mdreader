@@ -148,7 +148,7 @@
   const theme = EditorView.theme({
     '&': { height: '100%', fontSize: '14px', backgroundColor: 'var(--bg)', color: 'var(--text)' },
     '.cm-scroller': { fontFamily: 'var(--mono)', lineHeight: '1.7', overflow: 'auto' },
-    '.cm-content': { padding: '40px 0 50vh', maxWidth: '760px', margin: '0 auto', caretColor: 'var(--accent)' },
+    '.cm-content': { padding: '40px 0 50vh', maxWidth: 'var(--ed-width, 760px)', margin: '0 auto', caretColor: 'var(--accent)' },
     '.cm-line': { padding: '0 32px' },
     '&.cm-focused': { outline: 'none' },
     '.cm-cursor': { borderLeftColor: 'var(--accent)', borderLeftWidth: '2px' },
@@ -284,7 +284,7 @@
   });
 </script>
 
-<div class="editor" bind:this={host}></div>
+<div class="editor" bind:this={host} style="--ed-width:{app.settings.editorWidth}px"></div>
 
 <style>
   .editor {

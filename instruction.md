@@ -72,6 +72,6 @@ npm run build && npm test                        # smoke tests against dist/
 | Save now | `⌘/Ctrl+S` (autosave runs ~0.5s after typing) |
 | Formatting | `⌘/Ctrl+B` bold, `⌘/Ctrl+I` italic, `⌘/Ctrl+K` link |
 | Table of contents | Put `[[toc]]` on its own line |
-| Appearance | Gear icon: theme, preview style, font, size, width |
+| Appearance | Gear icon: theme; preview style, font, size, line width; editor line width |
 
 Note: private/incognito windows in Safari don't provide browser storage, so files can't be saved there.

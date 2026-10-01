@@ -138,6 +138,9 @@ test('modes, theme, export', async ({ page }) => {
   await shot(page, 'dark-sepia');
   // app shell never scrolls as a whole; only the panes do
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+  // editor line width is configurable like the preview's
+  await page.getByLabel('Editor line width').fill('520');
+  await expect.poll(() => page.locator('.cm-content').evaluate((el) => el.getBoundingClientRect().width)).toBeLessThanOrEqual(520);
   await page.keyboard.press('Escape');
 
   const dl = page.waitForEvent('download');

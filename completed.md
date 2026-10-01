@@ -30,6 +30,7 @@
 - [x] PWA: installable, works fully offline
 - [x] Tree keyboard navigation (arrows, Enter, F2, Delete)
 - [x] Faster first load: KaTeX and highlight.js load only when a document needs them
+- [x] Editor line width setting (Settings → Editor), alongside the preview's
 - [x] Fix: bold/italic starting with `+` (e.g. `**+ FP8**` in tables) now renders
 - [x] 30 smoke tests across Chromium, WebKit, Firefox
 
