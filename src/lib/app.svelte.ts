@@ -85,7 +85,7 @@ class App {
   /** Registered by the editor / preview so either side can follow the other, and search/outline can jump. */
   scrollEditorTo: ((line: number) => void) | null = null;
   scrollPreviewTo: ((line: number) => void) | null = null;
-  focusEditorLine: ((line: number) => void) | null = null;
+  focusEditorLine: ((line: number, sel?: [number, number]) => void) | null = null;
   runEditor: ((cmd: Command) => void) | null = null;
 
   dark = $state(false);
@@ -135,18 +135,18 @@ class App {
     });
   }
 
-  /** Scroll editor + preview to a source line (search hits, outline). */
-  revealLine(line: number) {
-    if (this.mode !== 'preview') this.focusEditorLine?.(line);
+  /** Scroll editor + preview to a source line (search hits, outline); sel = columns to select in that line. */
+  revealLine(line: number, sel?: [number, number]) {
+    if (this.mode !== 'preview') this.focusEditorLine?.(line, sel);
     this.scrollPreviewTo?.(line);
   }
 
-  async openAt(path: string, line?: number) {
+  async openAt(path: string, line?: number, sel?: [number, number]) {
     await this.open(path);
     if (!line) return;
     await tick();
     // the preview may still be rendering the newly opened file
-    requestAnimationFrame(() => setTimeout(() => this.revealLine(line), 60));
+    requestAnimationFrame(() => setTimeout(() => this.revealLine(line, sel), 60));
   }
 
   /** [[target]] -> path: exact path, then same folder, then any file with that name. */

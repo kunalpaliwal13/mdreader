@@ -63,7 +63,7 @@ npm run build && npm test                        # smoke tests against dist/
 | Dark / light | Sun/moon button next to Preview (System option in the gear menu) |
 | Go to file | `⌘/Ctrl+P` (fuzzy) |
 | Commands | `⌘/Ctrl+Shift+P`, or `⌘/Ctrl+P` then type `>` |
-| Search all files | `⌘/Ctrl+Shift+F` or the Search tab in the sidebar |
+| Search all files | `⌘/Ctrl+Shift+F` or the Search tab; toggles for case / whole word / regex (`Alt+C/W/R`), context lines, include / exclude globs (`notes/**, *.md`); Enter opens the top hit, `↑/↓` walk results |
 | Outline & backlinks | Outline tab in the sidebar |
 | Link notes | `[[note]]` or `[[note\|label]]`; type `[[` for suggestions; clicking a missing note creates it |
 | Resize split | Drag the divider; double-click resets |

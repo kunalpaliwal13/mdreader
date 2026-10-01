@@ -360,9 +360,13 @@
     view.scrollDOM.addEventListener('scroll', () => requestAnimationFrame(onScroll), { passive: true });
     app.scrollEditorTo = scrollToLine;
     app.runEditor = (cmd) => (cmd(view), view.focus());
-    app.focusEditorLine = (l) => {
+    app.focusEditorLine = (l, sel) => {
       const line = view.state.doc.line(Math.min(view.state.doc.lines, Math.max(1, l)));
-      view.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 60 }) });
+      const at = (c: number) => line.from + Math.min(c, line.length);
+      view.dispatch({
+        selection: sel ? { anchor: at(sel[0]), head: at(sel[1]) } : { anchor: line.from },
+        effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 60 }),
+      });
       view.focus();
     };
     if (!app.narrow) view.focus();
