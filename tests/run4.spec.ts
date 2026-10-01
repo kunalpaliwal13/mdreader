@@ -20,7 +20,7 @@ const replaceDoc = async (page: Page, text: string) => {
   await paste(page, text);
 };
 const create = async (page: Page, kind: 'file' | 'folder', name: string) => {
-  await page.getByRole('button', { name: kind === 'file' ? 'New file' : 'New folder' }).click();
+  await page.locator('.sidebar header').getByRole('button', { name: kind === 'file' ? 'New file' : 'New folder' }).click();
   await page.locator('.row input.rename').fill(name);
   await page.locator('.row input.rename').press('Enter');
 };
@@ -345,4 +345,34 @@ test('version history: snapshots on save, preview, restore keeps the current tex
   await page.getByRole('button', { name: 'Restore this version' }).click();
   await expect.poll(text).toBe('first');
   await expect(items).toHaveCount(2); // "third" was kept before restoring
+});
+
+test('open folder on disk (Chromium): its own tree, tabs and no Welcome; back to browser storage', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'File System Access is Chromium-only');
+  // the native picker can't be driven in tests: hand back a folder handle (OPFS-backed)
+  await page.addInitScript(() => {
+    (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker = async () =>
+      (await navigator.storage.getDirectory()).getDirectoryHandle('.disk-test', { create: true });
+  });
+  await ready(page);
+  const ws = page.getByRole('button', { name: 'Workspace' });
+  await ws.click();
+  await page.getByRole('menuitem', { name: 'Open folder on disk…' }).click();
+  await expect(ws).toContainText('.disk-test');
+  await expect(page.locator('.tree .row')).toHaveCount(0); // nothing seeded into a real folder
+  await create(page, 'file', 'disk-note');
+  await replaceDoc(page, '# On disk\n');
+  await page.keyboard.press('ControlOrMeta+s');
+  await expect(page.locator('.row[data-path="disk-note.md"]')).toHaveCount(1);
+
+  await ws.click();
+  await page.getByRole('menuitem', { name: 'Browser storage' }).click();
+  await expect(ws).toContainText('mdreader');
+  await expect(page.locator('.row[data-path="Welcome.md"]')).toHaveCount(1);
+  await expect(page.locator('.row[data-path="disk-note.md"]')).toHaveCount(0);
+
+  await ws.click();
+  await page.getByRole('menuitem', { name: 'Open folder on disk…' }).click();
+  await expect(page.locator('.row[data-path="disk-note.md"]')).toHaveCount(1);
+  await expect(preview(page).locator('h1')).toHaveText('On disk'); // its tab came back too
 });

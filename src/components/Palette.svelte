@@ -8,6 +8,7 @@
   import type { Command as EditorCommand } from '@codemirror/view';
   import { tableCommands } from '../lib/editor/table';
   import { templateFiles } from '../lib/templates';
+  import { canOpenFolder } from '../lib/workspace';
 
   type Item = { id: string; label: string; detail?: string; kbd?: string; run: () => void; score: number; marks: number[] };
 
@@ -44,6 +45,12 @@
       { id: 'new-file', label: 'New file', run: () => app.createFile(a ? dirname(a) : '') },
       { id: 'new-folder', label: 'New folder', run: () => app.createFolder(a ? dirname(a) : '') },
       { id: 'daily', label: "Open today's daily note", run: () => app.openDaily() },
+      ...(canOpenFolder
+        ? [
+            { id: 'open-folder', label: 'Open folder on disk…', run: () => app.openFolder() },
+            ...(app.folder ? [{ id: 'browser-ws', label: 'Back to browser storage', run: () => app.useFolder(null) }] : []),
+          ]
+        : []),
       { id: 'reopen', label: 'Reopen closed tab', run: () => app.reopenClosed() },
       { id: 'preview', label: app.mode === 'preview' ? 'Back to editing' : 'Toggle preview', kbd: `${mod}E`, run: () => app.togglePreview() },
       ...(!app.narrow ? [{ id: 'split', label: 'Toggle split view', run: () => app.toggleSplit() }] : []),

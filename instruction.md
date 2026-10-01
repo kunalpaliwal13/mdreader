@@ -80,6 +80,7 @@ npm run build && npm test                        # smoke tests against dist/
 | Fold | Hover a heading, list item, code block or quote and click the chevron; palette → Fold all / Unfold all; click a callout's title in the preview |
 | Tables | Type `\| Name \| Age \|` and Enter; Tab / Shift-Tab / Enter move between cells and align; the toolbar above the table aligns columns and adds, moves or deletes rows and columns |
 | Vim keys | Settings → Editor → Vim keys (or palette → Turn on Vim keys); the mode shows in the status bar |
+| Folder on disk | Chrome / Edge: click the workspace name (top-left) → Open folder on disk…; edits save straight to your files (`.trash` / `.history` live inside it, hidden) |
 | Version history | Right-click a file → Version history (or palette); click a version to preview, Restore brings it back (the current text is kept as a version too) |
 | Bookmarks | Right-click a file, tab or outline heading → Bookmark (or `⌘/Ctrl+Shift+B`); they list at the top of Files |
 | Tabs | Right-click a tab: Pin, Bookmark, Close, Close others, Reopen closed tab; middle-click closes; `⌘P` shows recent files first |

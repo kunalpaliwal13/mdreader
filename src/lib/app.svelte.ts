@@ -7,6 +7,7 @@ import { invalidateAsset, type Heading, type DocStyle } from './render';
 import welcome from './welcome.md?raw';
 import { tagsOf } from './tags';
 import { templateFiles, fill, localDate, DAILY, TEMPLATES } from './templates';
+import { rememberedFolder, rememberFolder, pickFolder, hasAccess, type Dir } from './workspace';
 
 export type Mode = 'edit' | 'split' | 'preview';
 export type Settings = {
@@ -69,6 +70,14 @@ export const editorStates = new Map<string, EditorState>();
 class App {
   entries = $state<Entry[]>([]);
   trash = $state<TrashEntry[]>([]);
+  /** null = browser storage; else the folder on disk being worked in (its tabs, bookmarks… are kept apart) */
+  folder = $state<{ name: string } | null>(null);
+  /** a remembered disk folder that needs a click to reconnect (permission) */
+  reconnectable = $state<string | null>(null);
+  private ns = '';
+  private k(key: string) {
+    return this.ns ? `${key}@${this.ns}` : key;
+  }
   expanded = new SvelteSet<string>(load<{ v: string[] }>('mdr.expanded', { v: [] }).v);
   selected = new SvelteSet<string>();
   anchor: string | null = null;
@@ -287,7 +296,7 @@ class App {
     persist('mdr.settings', this.settings);
   }
   saveExpanded() {
-    persist('mdr.expanded', { v: [...this.expanded] });
+    persist(this.k('mdr.expanded'), { v: [...this.expanded] });
   }
 
   notify(msg: string, kind: 'error' | 'info' = 'info') {
@@ -315,17 +324,65 @@ class App {
     this.trash = await fs.listTrash();
   }
 
-  async init() {
+  async init(): Promise<void> {
+    // last time in a folder on disk: reopen it when the browser still allows, else offer a one-click reconnect
+    const disk = load<{ v: boolean }>('mdr.disk', { v: false }).v ? await rememberedFolder() : undefined;
+    if (disk && (await hasAccess(disk, false).catch(() => false))) return this.useFolder(disk);
+    if (disk) (this.reconnectable = disk.name), this.notify(`Reconnect “${disk.name}” from the workspace menu (top left)`);
     this.storage = await fs.storage();
     if (this.storage === 'memory') this.notify("Private window: notes stay only until you close this tab — export them to keep them", 'error');
     await this.refresh();
     const seeded = load<{ v: boolean }>('mdr.seeded', { v: false }).v;
-    if (!this.entries.length && (!seeded || this.storage === 'memory')) {
+    // never write Welcome into a folder on disk
+    if (!this.folder && !this.entries.length && (!seeded || this.storage === 'memory')) {
       await fs.write('Welcome.md', welcome);
       persist('mdr.seeded', { v: true });
       await this.refresh();
     }
-    const session = load<{ tabs: string[]; active: string | null; pinned: string[] }>('mdr.session', { tabs: [], active: null, pinned: [] });
+    await this.restoreSession();
+  }
+
+  /** Switch the whole workspace: a folder on disk, or (null) browser storage. Each keeps its own tabs, bookmarks… */
+  async useFolder(h: Dir | null): Promise<void> {
+    await this.flush();
+    this.tabs = [];
+    this.active = null;
+    this.texts = {};
+    editorStates.clear();
+    this.pinned.clear();
+    this.selected.clear();
+    this.closedTabs = [];
+    this.folder = h ? { name: h.name } : null;
+    this.reconnectable = null;
+    this.ns = h ? 'disk:' + h.name : '';
+    persist('mdr.disk', { v: !!h });
+    await fs.setRoot(h);
+    this.storage = await fs.storage();
+    this.expanded.clear();
+    for (const p of load<{ v: string[] }>(this.k('mdr.expanded'), { v: [] }).v) this.expanded.add(p);
+    this.bookmarks = load<{ v: Bookmark[] }>(this.k('mdr.bookmarks'), { v: [] }).v;
+    this.recent = load<{ v: string[] }>(this.k('mdr.recent'), { v: [] }).v;
+    await this.refresh();
+    if (!h) return this.init();
+    await this.restoreSession();
+    this.notify(`Working in “${h.name}” on disk`);
+  }
+
+  async openFolder() {
+    const h = await pickFolder();
+    if (!h) return;
+    await rememberFolder(h).catch(() => {});
+    await this.useFolder(h);
+  }
+
+  async reconnectFolder() {
+    const h = await rememberedFolder();
+    if (h && (await hasAccess(h, true).catch(() => false))) await this.useFolder(h);
+    else this.notify('Folder not available — open it again', 'error');
+  }
+
+  private async restoreSession() {
+    const session = load<{ tabs: string[]; active: string | null; pinned: string[] }>(this.k('mdr.session'), { tabs: [], active: null, pinned: [] });
     const files = new Set(this.entries.filter((e) => e.kind === 'file').map((e) => e.path));
     for (const t of session.tabs) if (files.has(t)) await this.open(t, false);
     for (const t of session.pinned) if (this.tabs.includes(t)) this.pinned.add(t);
@@ -335,7 +392,7 @@ class App {
   }
 
   private saveSession() {
-    persist('mdr.session', { tabs: this.tabs, active: this.active, pinned: [...this.pinned] });
+    persist(this.k('mdr.session'), { tabs: this.tabs, active: this.active, pinned: [...this.pinned] });
   }
 
   isBookmarked(path: string, heading = '') {
@@ -345,7 +402,7 @@ class App {
     const i = this.bookmarks.findIndex((b) => b.path === path && (b.heading ?? '') === heading);
     if (i >= 0) this.bookmarks.splice(i, 1);
     else this.bookmarks.push(heading ? { path, heading } : { path });
-    persist('mdr.bookmarks', { v: this.bookmarks });
+    persist(this.k('mdr.bookmarks'), { v: this.bookmarks });
     this.notify(i >= 0 ? 'Bookmark removed' : 'Bookmarked');
   }
 
@@ -380,7 +437,7 @@ class App {
       if (this.active && this.active !== path) await this.flush(this.active);
       this.active = path;
       this.recent = [path, ...this.recent.filter((p) => p !== path)].slice(0, 30);
-      persist('mdr.recent', { v: this.recent });
+      persist(this.k('mdr.recent'), { v: this.recent });
       // the tree highlights one thing: the open file (multi-select is its own gesture)
       if (this.selected.size <= 1) {
         this.selected.clear();
@@ -463,8 +520,8 @@ class App {
     this.bookmarks = this.bookmarks.map((b) => ({ ...b, path: map(b.path) }));
     this.recent = this.recent.map(map);
     this.closedTabs = this.closedTabs.map(map);
-    persist('mdr.bookmarks', { v: this.bookmarks });
-    persist('mdr.recent', { v: this.recent });
+    persist(this.k('mdr.bookmarks'), { v: this.bookmarks });
+    persist(this.k('mdr.recent'), { v: this.recent });
     for (const set of [this.expanded, this.selected, this.pinned]) {
       for (const k of [...set]) {
         const n = map(k);

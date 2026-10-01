@@ -2,10 +2,11 @@
   import {
     FilePlus, FolderPlus, Import, Search, Trash, Settings as SettingsIcon, PanelLeftClose, X,
     Pencil, Copy, FileDown, Archive, FileText, FolderUp, FileArchive, FolderTree, TextSearch, ListTree, CalendarDays,
-    Bookmark, BookmarkMinus, Hash, ChevronRight, Folder, History,
+    Bookmark, BookmarkMinus, Hash, ChevronRight, Folder, History, HardDrive, FolderOpen, Check, Database, RotateCcw, ChevronDown,
   } from '@lucide/svelte';
   import TreeNode, { type TreeCtx } from './TreeNode.svelte';
   import HistoryPanel from './HistoryPanel.svelte';
+  import { canOpenFolder } from '../lib/workspace';
   import type { Bookmark as BookmarkT } from '../lib/app.svelte';
   import { mdHeadings, headingKey } from '../lib/headings';
   import TrashPanel from './TrashPanel.svelte';
@@ -122,6 +123,18 @@
     if (matchMedia('(max-width: 760px)').matches) app.settings.sidebar = false;
   }
 
+  // Chromium: work in a folder on disk instead of browser storage
+  function workspaceMenu(e: MouseEvent) {
+    openMenu(e, [
+      { heading: 'Workspace' },
+      { label: 'Browser storage', icon: app.folder ? Database : Check, action: () => app.folder && app.useFolder(null) },
+      ...(app.folder ? [{ label: app.folder.name, icon: Check, action: () => {} }] : []),
+      ...(app.reconnectable ? [{ label: `Reconnect “${app.reconnectable}”`, icon: RotateCcw, action: () => app.reconnectFolder() }] : []),
+      { sep: true },
+      { label: app.folder ? 'Open another folder…' : 'Open folder on disk…', icon: FolderOpen, action: () => app.openFolder() },
+    ], e.currentTarget as HTMLElement);
+  }
+
   function importMenu(e: MouseEvent) {
     const dir = targetDir();
     openMenu(e, [
@@ -213,7 +226,14 @@
 
 <aside class="sidebar">
   <header>
-    <span class="brand">mdreader</span>
+    {#if canOpenFolder}
+      <button class="brand ws" title="Workspace: browser storage or a folder on disk" aria-label="Workspace" onclick={workspaceMenu}>
+        {#if app.folder}<HardDrive size={13} /><span class="ws-name">{app.folder.name}</span>{:else}mdreader{/if}
+        <ChevronDown size={12} />
+      </button>
+    {:else}
+      <span class="brand">mdreader</span>
+    {/if}
     <div class="actions">
       <button class="icon-btn" title="New file" aria-label="New file" onclick={() => app.createFile(targetDir())}><FilePlus size={15} /></button>
       <button class="icon-btn" title="New folder" aria-label="New folder" onclick={() => app.createFolder(targetDir())}><FolderPlus size={15} /></button>
@@ -333,6 +353,14 @@
   .views button.on { background: var(--bg-elevated); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
   header { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 8px 0 14px; }
   .brand { font-weight: 600; letter-spacing: -0.01em; font-size: 13px; }
+  .ws {
+    display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 140px; margin-left: -6px; padding: 3px 6px;
+    border: 0; border-radius: 6px; background: none; color: var(--text); cursor: pointer;
+  }
+  .ws:hover { background: var(--bg-hover); }
+  .ws :global(svg:last-child) { color: var(--text-faint); opacity: 0; transition: opacity .12s; }
+  .ws:hover :global(svg:last-child), .ws:focus-visible :global(svg:last-child) { opacity: 1; }
+  .ws-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .actions { display: flex; gap: 1px; }
   .filter {
     display: flex; align-items: center; gap: 6px; margin: 0 8px 6px; padding: 0 6px 0 8px; height: 28px;

@@ -111,6 +111,7 @@ async function exists(path: string): Promise<boolean> {
 async function walk(d: FileSystemDirectoryHandle, prefix: string, out: Entry[]) {
   // @ts-ignore entries() is missing from older lib.dom typings
   for await (const [name, h] of d.entries() as AsyncIterable<[string, FileSystemHandle]>) {
+    if (name.startsWith('.') || name === 'node_modules') continue; // .trash, .history, .git… stay out of the tree
     const path = prefix ? `${prefix}/${name}` : name;
     if (h.kind === 'directory') {
       out.push({ path, kind: 'dir' });
@@ -139,6 +140,12 @@ async function write(path: string, data: string | ArrayBuffer) {
   const [p, name] = parentAndName(path);
   const fh = await (await dir(p, true)).getFileHandle(name, { create: true });
   const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : new Uint8Array(data);
+  // a folder on disk (File System Access) has no sync handles; createWritable swaps the file in atomically
+  if (typeof fh.createSyncAccessHandle !== 'function') {
+    const w = await (fh as FileSystemFileHandle & { createWritable(): Promise<FileSystemWritableFileStream> }).createWritable();
+    await w.write(bytes);
+    return w.close();
+  }
   const h = await fh.createSyncAccessHandle();
   try {
     // write first, then trim: an interrupted save never leaves an empty file
@@ -271,6 +278,12 @@ async function moveHistory(from: string, to: string) {
   }
 }
 
+/** Work in a folder on disk (Chromium "Open folder"), or back in browser storage with null. */
+async function setRoot(h: FileSystemDirectoryHandle | null) {
+  memory = false;
+  rootP = h ? Promise.resolve(h) : null;
+}
+
 /** 'memory' in private windows: nothing outlives the tab. */
 async function storage(): Promise<'opfs' | 'memory'> {
   await root();
@@ -279,7 +292,7 @@ async function storage(): Promise<'opfs' | 'memory'> {
 
 const ops = {
   list, read, readBytes, write, mkdir, move, copy, trash, listTrash, restore, purge, emptyTrash, exists, uniquePath, storage,
-  snapshot, versions, version, moveHistory,
+  snapshot, versions, version, moveHistory, setRoot,
 };
 export type Ops = typeof ops;
 

@@ -78,7 +78,8 @@
 
 - [x] Storage fallback for private windows: no OPFS (Safari / Firefox private browsing) → notes live in memory
       for the tab, with a notice and a "Private window — not kept" status chip
-- [ ] Open a real folder on disk (Chromium)
+- [x] Open a real folder on disk (Chromium): workspace menu (top-left name) or palette; its own tabs, bookmarks and
+      recents; nothing seeded into it; reopens after a reload (one-click reconnect if the browser asks again)
 - [x] Per-note look via front matter: `preset: sepia`, `font: serif` (preview + exports; Settings says when a note overrides)
 - [x] Custom CSS (Appearance → Custom CSS): styles the preview and exports
 - [x] Version history: a version every 5 minutes of editing (last 50 per note, follows renames/moves); file menu or
