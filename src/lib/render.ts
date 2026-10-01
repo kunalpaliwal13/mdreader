@@ -1,6 +1,7 @@
 import DOMPurify from 'dompurify';
 import { fs, resolveRel, isImage, basename } from './fs';
 import { headingKey, splitTarget } from './headings';
+import { TAG } from './tags';
 
 // heavy renderers load only when a document needs them
 let katexP: Promise<typeof import('katex').default> | null = null;
@@ -92,10 +93,14 @@ function frontMatterCard(fm: string): HTMLElement {
   card.className = 'front-matter';
   const dl = document.createElement('dl');
   const unquote = (v: string) => v.trim().replace(/^["']|["']$/g, '');
+  let key = '';
   const chip = (dd: HTMLElement, v: string) => {
-    const c = document.createElement('span');
-    c.className = 'fm-chip';
-    c.textContent = unquote(v);
+    // tags are clickable, like inline #tags
+    const isTag = /^tags?$/i.test(key);
+    const c = document.createElement(isTag ? 'a' : 'span');
+    c.className = isTag ? 'fm-chip tag' : 'fm-chip';
+    c.textContent = unquote(v).replace(/^#/, '');
+    if (isTag) (c as HTMLAnchorElement).href = '#', (c.dataset.tag = c.textContent.toLowerCase());
     dd.append(c);
   };
   let lastDd: HTMLElement | null = null;
@@ -103,10 +108,11 @@ function frontMatterCard(fm: string): HTMLElement {
     const m = line.match(/^([\w.-]+)\s*:\s*(.*)$/);
     if (m) {
       const dt = document.createElement('dt');
-      dt.textContent = m[1];
+      dt.textContent = key = m[1];
       lastDd = document.createElement('dd');
       const v = m[2].trim();
       if (/^\[.*\]$/.test(v)) v.slice(1, -1).split(',').filter((x) => x.trim()).forEach((x) => chip(lastDd!, x));
+      else if (/^tags?$/i.test(key) && v) v.split(/[,\s]+/).filter(Boolean).forEach((x) => chip(lastDd!, x));
       else lastDd.textContent = unquote(v);
       dl.append(dt, lastDd);
     } else if (lastDd && /^\s*-\s+/.test(line)) {
@@ -220,6 +226,29 @@ function embedNode(raw: string, opts: RenderOpts, jobs: Promise<void>[]): Node {
   return box;
 }
 
+/** #tags (comrak has no tag syntax) become pills that search the workspace. */
+function tags(el: HTMLElement) {
+  const texts: Text[] = [];
+  const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let n: Node | null; (n = walk.nextNode()); )
+    if (n.nodeValue!.includes('#') && !n.parentElement!.closest('code, pre, a, [data-math-style], .front-matter')) texts.push(n as Text);
+  for (const node of texts) {
+    const s = node.nodeValue!;
+    const parts: (string | Node)[] = [];
+    let last = 0;
+    for (const m of s.matchAll(TAG)) {
+      const a = document.createElement('a');
+      a.className = 'tag';
+      a.href = '#';
+      a.dataset.tag = m[1].toLowerCase();
+      a.textContent = m[0];
+      parts.push(s.slice(last, m.index), a);
+      last = m.index! + m[0].length;
+    }
+    if (parts.length) node.replaceWith(...parts, s.slice(last));
+  }
+}
+
 async function embeds(el: HTMLElement, opts: RenderOpts) {
   const texts: Text[] = [];
   const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -272,6 +301,7 @@ export async function renderToElement(md: string, opts: RenderOpts): Promise<{ e
     if (wikiToc || /^\s*\[(\[toc\]|toc)\]\s*$/i.test(p.textContent ?? '')) p.replaceWith(toc(parsed.headings));
   }
 
+  tags(el);
   await embeds(el, opts);
 
   // math: inline spans and display blocks (```math or $$)

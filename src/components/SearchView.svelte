@@ -3,6 +3,7 @@
   import { app } from '../lib/app.svelte';
   import { basename, dirname } from '../lib/fs';
   import { matcher, ranges, globs, included, searchText, type Hit, type Range } from '../lib/search';
+  import { TAG_QUERY } from '../lib/tags';
 
   type Result = { path: string; dir: boolean; name: Range[]; hits: Hit[]; count: number };
 
@@ -14,7 +15,6 @@
       return {};
     }
   })();
-  let query = $state('');
   let caseSensitive = $state<boolean>(saved.caseSensitive ?? false);
   let wholeWord = $state<boolean>(saved.wholeWord ?? false);
   let regex = $state<boolean>(saved.regex ?? false);
@@ -42,7 +42,9 @@
 
   async function run() {
     const id = ++seq;
+    const query = app.searchQuery;
     const re = matcher({ query, caseSensitive, wholeWord, regex });
+    const tag = !regex && TAG_QUERY.test(query) ? query.slice(1) : undefined;
     error = re instanceof Error ? 'Invalid regular expression' : '';
     if (!re || re instanceof Error) return ((results = []), (searching = false));
     searching = true;
@@ -61,7 +63,7 @@
       if (e.kind !== 'file' || !included(path, inc, exc)) continue;
       const name = ranges(re, basename(path));
       const text = texts.get(path);
-      const { hits, count } = text === undefined || total >= MAX_TOTAL ? { hits: [], count: 0 } : searchText(re, text, context, MAX_LINES);
+      const { hits, count } = text === undefined || total >= MAX_TOTAL ? { hits: [], count: 0 } : searchText(re, text, context, MAX_LINES, tag);
       total += count;
       if (count || name.length) out.push({ path, dir: false, name, hits, count });
     }
@@ -72,7 +74,7 @@
   }
 
   $effect(() => {
-    void [query, caseSensitive, wholeWord, regex, context, include, exclude];
+    void [app.searchQuery, caseSensitive, wholeWord, regex, context, include, exclude];
     clearTimeout(timer);
     timer = setTimeout(run, 180);
   });
@@ -104,7 +106,7 @@
   }
 
   function onKey(e: KeyboardEvent) {
-    if (e.key === 'Escape') query = '';
+    if (e.key === 'Escape') app.searchQuery = '';
     if (e.key === 'Enter') return openTop();
     // VS Code muscle memory: Alt+C / Alt+W / Alt+R
     if (!e.altKey || e.metaKey || e.ctrlKey) return;
@@ -130,6 +132,13 @@
     input?.focus();
     input?.select();
   });
+
+  // with nothing typed, the workspace's tags (click one to search it)
+  let tags = $state<[string, number][]>([]);
+  $effect(() => {
+    void app.entries.length;
+    if (!app.searchQuery.trim()) app.allTags().then((t) => (tags = t));
+  });
 </script>
 
 {#snippet marked(text: string, marks: Range[])}
@@ -140,8 +149,8 @@
 <div class="search" bind:this={box} onkeydown={arrows}>
   <label class="field" class:invalid={!!error}>
     <Search size={13} />
-    <input bind:this={input} bind:value={query} placeholder="Search in all files" spellcheck="false" onkeydown={onKey} />
-    {#if query}<button class="icon-btn tiny" aria-label="Clear search" onclick={() => (query = '')}><X size={12} /></button>{/if}
+    <input bind:this={input} bind:value={app.searchQuery} placeholder="Search in all files" spellcheck="false" onkeydown={onKey} />
+    {#if app.searchQuery}<button class="icon-btn tiny" aria-label="Clear search" onclick={() => (app.searchQuery = '')}><X size={12} /></button>{/if}
     <button class="icon-btn tiny" class:active={caseSensitive} title="Match case (Alt+C)" aria-label="Match case" aria-pressed={caseSensitive} onclick={() => (caseSensitive = !caseSensitive)}><CaseSensitive size={14} /></button>
     <button class="icon-btn tiny" class:active={wholeWord} title="Match whole word (Alt+W)" aria-label="Match whole word" aria-pressed={wholeWord} onclick={() => (wholeWord = !wholeWord)}><WholeWord size={14} /></button>
     <button class="icon-btn tiny" class:active={regex} title="Use regular expression (Alt+R)" aria-label="Use regular expression" aria-pressed={regex} onclick={() => (regex = !regex)}><Regex size={14} /></button>
@@ -150,7 +159,7 @@
   <div class="bar">
     <span class="summary" role="status">
       {#if error}<span class="err">{error}</span>
-      {:else if !query}&nbsp;
+      {:else if !app.searchQuery}&nbsp;
       {:else if searching}Searching…
       {:else if results.length}
         {#if withHits}{total}{total >= MAX_TOTAL ? '+' : ''} {total === 1 ? 'match' : 'matches'} in {withHits} {withHits === 1 ? 'file' : 'files'}{/if}{#if withHits && names} · {/if}{#if names}{names} by name{/if}
@@ -168,6 +177,14 @@
   {/if}
 
   <div class="results">
+    {#if !app.searchQuery.trim() && tags.length}
+      <div class="tags-head">Tags</div>
+      <div class="tags">
+        {#each tags as [t, n] (t)}
+          <button class="tag" onclick={() => (app.searchQuery = '#' + t)}>#{t}<span>{n}</span></button>
+        {/each}
+      </div>
+    {/if}
     {#each results as r (r.path)}
       <button class="file" onclick={() => reveal(r)} title={r.path}>
         {#if r.dir}<Folder size={12} />{/if}
@@ -205,6 +222,14 @@
   .bar { display: flex; align-items: center; gap: 1px; padding: 0 11px 4px 14px; min-height: 26px; }
   .summary { flex: 1; min-width: 0; font-size: 11px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .err { color: var(--danger); }
+  .tags-head { padding: 6px 8px 4px; font-size: 10.5px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: .05em; }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 6px; }
+  button.tag {
+    display: inline-flex; align-items: baseline; gap: 5px; padding: 2px 8px; border: 0; border-radius: 10px; cursor: pointer;
+    background: var(--accent-soft); color: var(--accent); font-size: 12px;
+  }
+  button.tag:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  button.tag span { font-size: 10.5px; color: var(--text-faint); }
   .chip { border: 0; padding: 0 2px; background: none; color: var(--accent); font: inherit; cursor: pointer; }
   .globs { display: flex; flex-direction: column; gap: 4px; margin: 0 8px 6px; }
   .globs input {

@@ -5,6 +5,7 @@ import type { EditorState } from '@codemirror/state';
 import { fs, dirname, basename, join, isMarkdown, type Entry, type TrashEntry } from './fs';
 import { invalidateAsset, type Heading } from './render';
 import welcome from './welcome.md?raw';
+import { tagsOf } from './tags';
 
 export type Mode = 'edit' | 'split' | 'preview';
 export type Settings = {
@@ -80,6 +81,8 @@ class App {
   panel = $state<'trash' | 'settings' | null>(null);
   headings = $state<Heading[]>([]);
   palette = $state<{ open: boolean; query: string }>({ open: false, query: '' });
+  /** the sidebar search box (kept while switching sidebar views; #tag clicks fill it) */
+  searchQuery = $state('');
   /** PWA install prompt captured from beforeinstallprompt (Chromium only). */
   installPrompt = $state<{ prompt: () => void } | null>(null);
   /** Registered by the editor / preview so either side can follow the other, and search/outline can jump. */
@@ -175,6 +178,24 @@ class App {
   /** One file's text (open buffer wins over disk). */
   readText(path: string): Promise<string> {
     return path in this.texts ? Promise.resolve(this.texts[path]) : fs.read(path).catch(() => '');
+  }
+
+  /** Search the workspace from anywhere (tag pills, palette). */
+  searchFor(q: string) {
+    this.searchQuery = q;
+    this.sidebarView = 'search';
+    this.settings.sidebar = true;
+  }
+
+  private tagCache: { at: number; tags: [string, number][] } | null = null;
+  /** Workspace tags with how many notes use each, most used first (cached a few seconds). */
+  async allTags(): Promise<[string, number][]> {
+    if (this.tagCache && performance.now() - this.tagCache.at < 3000) return this.tagCache.tags;
+    const counts = new Map<string, number>();
+    for (const { text } of await this.readAll()) for (const t of tagsOf(text)) counts.set(t, (counts.get(t) ?? 0) + 1);
+    const tags = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    this.tagCache = { at: performance.now(), tags };
+    return tags;
   }
 
   /** Every markdown file's text (open buffers win over disk). */

@@ -26,6 +26,10 @@ Wikilinks connect files: [[Welcome]] points back here, and [[My first note|this 
 yet — click it in the preview to create it. Type `[[` in the editor to autocomplete file names. The
 **Outline** tab in the sidebar shows headings and every file linking here.
 
+[[Welcome#Tables]] links straight to a heading (type `[[note#` for suggestions), `![[note]]` or
+`![[note#Heading]]` embeds another note or one section of it, and hovering a note link previews it.
+Tags like #ideas or #reading/books group notes — click one, or open **Search** with nothing typed to see them all.
+
 ## Lists
 
 - Unordered item

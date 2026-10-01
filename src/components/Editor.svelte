@@ -3,7 +3,7 @@
   import { EditorState, EditorSelection, Compartment, StateField, StateEffect, RangeSet, Prec, type Extension } from '@codemirror/state';
   import {
     EditorView, keymap, drawSelection, dropCursor, highlightActiveLine, placeholder, rectangularSelection, crosshairCursor,
-    ViewPlugin, GutterMarker, gutterLineClass, type Command,
+    ViewPlugin, GutterMarker, gutterLineClass, MatchDecorator, Decoration, type DecorationSet, type ViewUpdate, type Command,
   } from '@codemirror/view';
   import { smartTyping } from '../lib/editor/smart';
   import { slashComplete } from '../lib/editor/slash';
@@ -12,12 +12,13 @@
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
   import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBackward } from '@codemirror/lang-markdown';
   import { languages } from '@codemirror/language-data';
-  import { syntaxHighlighting, HighlightStyle, indentOnInput, bracketMatching, foldGutter, foldKeymap } from '@codemirror/language';
+  import { syntaxHighlighting, HighlightStyle, indentOnInput, bracketMatching, foldGutter, foldKeymap, syntaxTree } from '@codemirror/language';
   import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search';
   import { tags as t } from '@lezer/highlight';
   import { autocompletion, type CompletionContext } from '@codemirror/autocomplete';
   import { isMarkdown, basename, dirname } from '../lib/fs';
   import { mdHeadings } from '../lib/headings';
+  import { TAG } from '../lib/tags';
   import { app, editorStates } from '../lib/app.svelte';
 
   let { path }: { path: string } = $props();
@@ -82,6 +83,14 @@
     const text = target === current ? ctx.state.doc.toString() : await app.readText(target);
     const options = mdHeadings(text).map((h) => ({ label: h.text, detail: 'H' + h.level, type: 'text', apply: closeWith(h.text) }));
     return { from, options, validFor: /^[^\]|\n#]*$/ };
+  }
+
+  // #ta -> workspace tags (needs a character after #, so typing "# " for a heading never pops it)
+  async function tagComplete(ctx: CompletionContext) {
+    const m = ctx.matchBefore(/(?<=^|\s)#[\p{L}\p{N}_/-]+$/u);
+    if (!m || inCode(ctx.state, m.from)) return null;
+    const options = (await app.allTags()).map(([label, n]) => ({ label, detail: String(n), type: 'text' }));
+    return { from: m.from + 1, options, validFor: /^[\p{L}\p{N}_/-]*$/u };
   }
 
   // [[ -> workspace file names
@@ -174,6 +183,22 @@
     },
   });
 
+  // #tags get a tint, like in the preview (not in code)
+  const CODE_NODES = /^(InlineCode|FencedCode|CodeBlock|CodeText|HTMLBlock|URL|LinkMark|Link)$/;
+  const inCode = (state: EditorState, pos: number) => {
+    for (let n: { name: string; parent: unknown } | null = syntaxTree(state).resolveInner(pos, 1); n; n = n.parent as typeof n)
+      if (CODE_NODES.test(n.name)) return true;
+    return false;
+  };
+  const tagDeco = Decoration.mark({ class: 'cm-tag' });
+  const tagMatcher = new MatchDecorator({ regexp: TAG, decoration: (_m, v, pos) => (inCode(v.state, pos) ? null : tagDeco) });
+  class TagHighlight {
+    decorations: DecorationSet;
+    constructor(v: EditorView) { this.decorations = tagMatcher.createDeco(v); }
+    update(u: ViewUpdate) { this.decorations = tagMatcher.updateDeco(u, this.decorations); }
+  }
+  const tagHighlight = ViewPlugin.fromClass(TagHighlight, { decorations: (p) => p.decorations });
+
   // Obsidian-style: the fold chevron shows beside the line under the pointer (folded ones always show)
   const setHover = StateEffect.define<number>();
   const hoverLine = StateField.define<number>({
@@ -261,12 +286,13 @@
     '.cm-completionMatchedText': { textDecoration: 'none', color: 'var(--accent)', fontWeight: '600' },
     '.cm-tooltip-autocomplete': { minWidth: '240px' },
     '.cm-tooltip.cm-table-tip': { borderRadius: '7px' },
+    '.cm-tag': { color: 'var(--accent)', backgroundColor: 'var(--accent-soft)', borderRadius: '4px', padding: '0 1px' },
   });
 
   // everything the Plain toggle turns off
   const smartC = new Compartment();
   const smart = (): Extension[] =>
-    app.settings.plain ? [] : smartTyping([autocompletion({ override: [wikiComplete, slashComplete], icons: false }), Prec.high(keymap.of(tableKeymap))]);
+    app.settings.plain ? [] : smartTyping([autocompletion({ override: [wikiComplete, tagComplete, slashComplete], icons: false }), Prec.high(keymap.of(tableKeymap))]);
 
   const extensions: Extension[] = [
     history(),
@@ -292,6 +318,7 @@
     }),
     foldHover,
     tableToolbar,
+    tagHighlight,
     EditorState.allowMultipleSelections.of(true),
     rectangularSelection(),
     crosshairCursor(),

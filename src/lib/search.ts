@@ -1,4 +1,7 @@
 // Workspace search, ripgrep-style: case / whole word / regex, include + exclude globs, context lines, name matches.
+import { TAG_QUERY, frontMatterTagLines } from './tags';
+
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export type Opts = { query: string; caseSensitive: boolean; wholeWord: boolean; regex: boolean };
 export type Range = [number, number];
@@ -6,7 +9,9 @@ export type Range = [number, number];
 /** null = nothing to search for; Error = the regex doesn't compile. */
 export function matcher(o: Opts): RegExp | Error | null {
   if (!o.query) return null;
-  const src = o.regex ? o.query : o.query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // "#tag" finds that tag and its children (#tag/sub), not #tagged
+  if (!o.regex && TAG_QUERY.test(o.query)) return new RegExp(`(?<=^|\\s)${esc(o.query)}(?:/[\\p{L}\\p{N}_-]+)*(?![\\p{L}\\p{N}_/-])`, 'giu');
+  const src = o.regex ? o.query : esc(o.query);
   const flags = 'g' + (o.caseSensitive ? '' : 'i');
   try {
     // \b is ASCII-only; Unicode lookarounds keep "café" and "नमस्ते" whole words
@@ -58,12 +63,15 @@ export const included = (path: string, include: RegExp[], exclude: RegExp[]) =>
 export type Hit = { line: number; text: string; marks: Range[]; first?: Range; context?: boolean };
 
 /** Hits for one file: matching lines (trimmed around the first match) plus optional ±1 context lines. */
-export function searchText(re: RegExp, text: string, context: boolean, max: number): { hits: Hit[]; count: number } {
+export function searchText(re: RegExp, text: string, context: boolean, max: number, tag?: string): { hits: Hit[]; count: number } {
   const lines = text.split('\n');
   const hits: Hit[] = [];
   let count = 0;
+  // a #tag search also finds the bare name in the front matter's tags field
+  const fm = tag ? frontMatterTagLines(lines) : null;
+  const bare = tag && new RegExp(`(?<=^|[\\s\\[,'"])${esc(tag)}(?:/[\\p{L}\\p{N}_-]+)*(?=$|[\\s\\],'"])`, 'giu');
   for (let i = 0; i < lines.length && count < max; i++) {
-    const r = ranges(re, lines[i]);
+    const r = fm && bare && i >= fm[0] && i < fm[1] ? ranges(bare, i === fm[0] ? lines[i].replace(/^(\s*tags?\s*:)/i, (m) => ' '.repeat(m.length)) : lines[i]) : ranges(re, lines[i]);
     if (!r.length) continue;
     count++;
     // keep the first match in view: cut long lines ~24 chars before it, drop indentation

@@ -40,7 +40,8 @@
     const a = (e.target as HTMLElement).closest('a');
     if (!a) return;
     e.preventDefault();
-    onlink(a, path);
+    if (a.dataset.tag) app.searchFor('#' + a.dataset.tag);
+    else onlink(a, path);
   }
 </script>
 

@@ -177,6 +177,10 @@
 .md .front-matter dt { margin: 0; color: var(--pv-muted); font-weight: 500; }
 .md .front-matter dd { margin: 0; color: var(--pv-text); display: flex; flex-wrap: wrap; gap: 4px; }
 .md .fm-chip { padding: 0 8px; border-radius: 10px; border: 1px solid var(--pv-border); background: var(--pv-bg); font-size: 0.92em; }
+/* #tags: quiet pills; in the app they search the workspace */
+.md a.tag { padding: 0.05em 0.45em; border-radius: 0.8em; background: color-mix(in srgb, var(--pv-link) 10%, transparent); color: var(--pv-link); font-size: 0.9em; text-decoration: none; white-space: nowrap; }
+.md a.tag:hover { background: color-mix(in srgb, var(--pv-link) 18%, transparent); }
+.md a.fm-chip.tag { border-color: transparent; }
 
 .md .toc { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; margin-bottom: 1.5em; border-left: 2px solid var(--pv-border); font-size: 0.9em; }
 .md .toc a { text-decoration: none; color: var(--pv-muted); }

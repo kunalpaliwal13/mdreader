@@ -181,6 +181,10 @@
     const a = t.closest('a');
     const href = a?.getAttribute('href');
     if (!a || !href) return;
+    if (a.dataset.tag) {
+      e.preventDefault();
+      return app.searchFor('#' + a.dataset.tag);
+    }
     if (a.dataset.wikilink) {
       e.preventDefault();
       return follow(a, path);

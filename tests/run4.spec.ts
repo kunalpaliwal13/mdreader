@@ -121,3 +121,39 @@ test('linking: [[note#Heading]], ![[embeds]] of notes and sections, image sizes,
   await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('Plan');
   await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('Later');
 });
+
+test('tags: preview pills + editor tint, front matter tags, tag list in empty search, #tag search, autocomplete', async ({ page }) => {
+  await ready(page);
+  await create(page, 'file', 'Tagged');
+  await replaceDoc(page, '---\ntags: [alpha]\n---\n# Tagged\n\nAbout #project/web and #2024 and `#code`.\n');
+  const pv = preview(page);
+  await expect(pv.locator('a.tag')).toHaveText(['alpha', '#project/web']); // #2024 and code aren't tags
+  await expect(page.locator('.cm-content .cm-tag')).toHaveText(['#project/web']);
+
+  // a tag pill searches the workspace
+  await pv.locator('a.tag', { hasText: '#project/web' }).click();
+  const q = page.getByPlaceholder('Search in all files');
+  await expect(q).toHaveValue('#project/web');
+  await expect(page.locator('.results .file')).toContainText(['Tagged.md']);
+
+  // nothing typed: the workspace's tags; a front matter tag finds its tags: line
+  await q.fill('');
+  const chips = page.locator('button.tag');
+  await expect(chips.filter({ hasText: '#alpha' })).toHaveCount(1);
+  await expect(chips.filter({ hasText: '#ideas' })).toHaveCount(1); // from Welcome.md
+  await chips.filter({ hasText: '#alpha' }).click();
+  await expect(q).toHaveValue('#alpha');
+  await expect(page.locator('.hit .ln')).toHaveText(['2']);
+
+  // a parent tag finds its children, not longer tags
+  await q.fill('#project');
+  await expect(page.locator('.results .file')).toContainText(['Tagged.md']);
+  await q.fill('#proj');
+  await expect(page.getByRole('status')).toHaveText('No results');
+
+  // # suggests workspace tags in the editor
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type(' #pro');
+  await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('project/web');
+});

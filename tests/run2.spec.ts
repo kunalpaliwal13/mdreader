@@ -54,7 +54,7 @@ test('outline jumps, wikilinks create + resolve, backlinks, autocomplete', async
   await expect(preview(page).locator('h2', { hasText: 'Footnotes' })).toBeInViewport();
 
   // resolved wikilink vs missing one
-  await expect(preview(page).locator('a[data-wikilink]', { hasText: 'Welcome' })).toHaveAttribute('data-path', 'Welcome.md');
+  await expect(preview(page).getByRole('link', { name: 'Welcome', exact: true })).toHaveAttribute('data-path', 'Welcome.md');
   const missing = preview(page).locator('a.wikilink-missing', { hasText: 'this one' });
   await expect(missing).toHaveCount(1);
   await missing.click();
