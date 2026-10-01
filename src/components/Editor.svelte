@@ -71,7 +71,17 @@
       .filter((e) => e.kind === 'file' && isMarkdown(e.path) && e.path !== current)
       .map((e) => {
         const label = basename(e.path).replace(/\.(md|markdown|mdx|txt)$/i, '');
-        return { label, detail: dirname(e.path), type: 'text', apply: label + ']]' };
+        return {
+          label,
+          detail: dirname(e.path),
+          type: 'text',
+          // auto-pair may already have typed the closing ]]: reuse it instead of doubling
+          apply: (view: EditorView, _c: unknown, from: number, to: number) => {
+            const closed = view.state.sliceDoc(to, to + 2) === ']]';
+            const end = closed ? to + 2 : to;
+            view.dispatch({ changes: { from, to: end, insert: label + ']]' }, selection: { anchor: from + label.length + 2 } });
+          },
+        };
       });
     return { from: m.from + 2, options, validFor: /^[^\]|\n]*$/ };
   }

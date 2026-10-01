@@ -7,12 +7,12 @@ export type Scheme = { id: string; name: string; swatch: Record<'dark' | 'light'
 
 export const SCHEMES: Scheme[] = [
   { id: 'default', name: 'Default', swatch: {
-    dark: ['#0f0f11', '#f87171', '#f59e0b', '#22c55e', '#8b8cf8'],
+    dark: ['#17171a', '#f87171', '#f59e0b', '#22c55e', '#8b8cf8'],
     light: ['#ffffff', '#dc2626', '#d97706', '#16a34a', '#5b5bd6'],
   } },
-  { id: 'medusa', name: 'Medusa', swatch: {
-    dark: ['#060D13', '#FF6A55', '#FFB224', '#3EDC9E', '#4DA3FF'],
-    light: ['#F4F8F9', '#C34A3A', '#B27404', '#0B9C6C', '#1F6FEB'],
+  { id: 'obsidian', name: 'Obsidian', swatch: {
+    dark: ['#1E1E1E', '#FB464C', '#E0DE71', '#44CF6E', '#8A6CEF'],
+    light: ['#FFFFFF', '#E93147', '#E0AC00', '#08B94E', '#7852EE'],
   } },
   { id: 'gruvbox', name: 'Gruvbox', swatch: {
     dark: ['#282828', '#FB4934', '#FABD2F', '#B8BB26', '#83A598'],

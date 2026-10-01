@@ -23,12 +23,14 @@ export type Settings = {
   split: number;
   /** max width of the editor's text column, px */
   editorWidth: number;
+  /** what the single line-width slider controls */
+  widthScope: 'editor' | 'both' | 'preview';
   /** Plain editor: smart typing features (live preview, slash menu, autocomplete, auto-pair, table format) off */
   plain: boolean;
 };
 export type SidebarView = 'files' | 'search' | 'outline';
 
-const DEFAULTS: Settings = { theme: 'system', scheme: 'default', preset: 'github', font: 'preset', size: 16, width: 760, mode: 'split', sidebar: true, sidebarWidth: 260, editMode: 'split', split: 50, editorWidth: 760, plain: false };
+const DEFAULTS: Settings = { theme: 'system', scheme: 'default', preset: 'github', font: 'preset', size: 16, width: 760, mode: 'split', sidebar: true, sidebarWidth: 260, editMode: 'split', split: 50, editorWidth: 760, widthScope: 'both', plain: false };
 
 /** Animate a DOM-changing state update with the View Transitions API where available. */
 export function transition(update: () => void) {

@@ -19,13 +19,13 @@
   color-scheme: light;
 }
 [data-theme='dark'] {
-  --bg: #0f0f11;
-  --bg-subtle: #131316;
-  --bg-hover: #1b1b1f;
-  --bg-active: #232328;
-  --bg-elevated: #18181c;
-  --border: #232327;
-  --border-strong: #303036;
+  --bg: #17171a;
+  --bg-subtle: #1b1b1f;
+  --bg-hover: #232328;
+  --bg-active: #2b2b31;
+  --bg-elevated: #202024;
+  --border: #2a2a2f;
+  --border-strong: #37373e;
   --text: #ededef;
   --text-muted: #9393a0;
   --text-faint: #5f5f69;

@@ -1,17 +1,17 @@
 /* Base16 schemes for app chrome + editor (preview presets are deliberately untouched).
-   Palettes copied from medusa/website/src/styles/themes.css. Scheme = html[data-scheme], mode = html[data-theme]. */
-/* ---------- MEDUSA (house scheme) ---------- */
-html[data-scheme="medusa"][data-theme="dark"]{
-  --base00:#060D13; --base01:#0C1922; --base02:#13242F; --base03:#1D323C;
-  --base04:#7E97A3; --base05:#DEEBF0; --base06:#EAF4F8; --base07:#F5FBFD;
-  --base08:#FF6A55; --base09:#FF8E3C; --base0A:#FFB224; --base0B:#3EDC9E;
-  --base0C:#2FD4EE; --base0D:#4DA3FF; --base0E:#B39BFF; --base0F:#C98C68;
+   Palettes copied from medusa/website/src/styles/themes.css (Obsidian added from Obsidian's default theme). Scheme = html[data-scheme], mode = html[data-theme]. */
+/* ---------- OBSIDIAN (default dark / light; accent hsl(254 80% 68%)) ---------- */
+html[data-scheme="obsidian"][data-theme="dark"]{
+  --base00:#1E1E1E; --base01:#262626; --base02:#363636; --base03:#4A4A4A;
+  --base04:#999999; --base05:#DADADA; --base06:#E6E6E6; --base07:#F5F5F5;
+  --base08:#FB464C; --base09:#E9973F; --base0A:#E0DE71; --base0B:#44CF6E;
+  --base0C:#53DFDD; --base0D:#027AFF; --base0E:#8A6CEF; --base0F:#FA99CD;
 }
-html[data-scheme="medusa"][data-theme="light"]{
-  --base00:#F4F8F9; --base01:#FFFFFF; --base02:#EDF3F5; --base03:#D9E4E9;
-  --base04:#54707E; --base05:#0E2029; --base06:#0A171E; --base07:#061014;
-  --base08:#C34A3A; --base09:#C86A15; --base0A:#B27404; --base0B:#0B9C6C;
-  --base0C:#0A93AD; --base0D:#1F6FEB; --base0E:#7C55E8; --base0F:#A0765A;
+html[data-scheme="obsidian"][data-theme="light"]{
+  --base00:#FFFFFF; --base01:#F6F6F6; --base02:#E3E3E3; --base03:#C4C4C4;
+  --base04:#5C5C5C; --base05:#222222; --base06:#1A1A1A; --base07:#000000;
+  --base08:#E93147; --base09:#EC7500; --base0A:#E0AC00; --base0B:#08B94E;
+  --base0C:#00BFBC; --base0D:#086DDD; --base0E:#7852EE; --base0F:#D53984;
 }
 
 /* ---------- GRUVBOX (dark medium / light medium) ---------- */
@@ -178,3 +178,6 @@ html[data-scheme]:not([data-scheme='default']) .editor {
   --cm-title: var(--base0D);
   --cm-attr: var(--base0A);
 }
+
+/* Obsidian: links and list markers use the purple accent, like Obsidian itself */
+html[data-scheme='obsidian'] .editor { --cm-link: var(--base0E); --cm-title: var(--base0E); }

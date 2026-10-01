@@ -13,10 +13,14 @@ test('base16 scheme recolors app + editor, not the preview', async ({ page }) =>
   await page.getByRole('button', { name: 'Switch to dark mode' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   // dark preview background (wait out the theme view transition)
-  await expect.poll(() => bg(page, '.preview-pane .scroller')).toBe('rgb(15, 15, 17)');
+  await expect.poll(() => bg(page, '.preview-pane .scroller')).toBe('rgb(23, 23, 26)');
   const previewBefore = await bg(page, '.preview-pane .scroller');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('button', { name: /Default/ }).click();
+  // stepper: Default -> Obsidian via ›, then the full list for Nord
+  await page.getByRole('button', { name: 'Next color scheme' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-scheme', 'obsidian');
+  expect(await bg(page, 'body')).toBe('rgb(30, 30, 30)'); // Obsidian #1e1e1e
+  await page.getByRole('button', { name: /All color schemes/ }).click();
   await page.getByRole('option', { name: 'Nord' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-scheme', 'nord');
   expect(await bg(page, 'body')).toBe('rgb(46, 52, 64)'); // Nord base00

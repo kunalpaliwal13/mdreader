@@ -133,14 +133,23 @@ test('modes, theme, export', async ({ page }) => {
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Dark', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await page.getByRole('button', { name: /Sepia/ }).click();
+  // GitHub -> Academic -> Minimal -> Sepia via the stepper
+  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Next preview style' }).click();
   await expect(preview(page)).toHaveClass(/preset-sepia/);
   await shot(page, 'dark-sepia');
   // app shell never scrolls as a whole; only the panes do
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
-  // editor line width is configurable like the preview's
-  await page.getByLabel('Editor line width').fill('520');
-  await expect.poll(() => page.locator('.cm-content').evaluate((el) => el.getBoundingClientRect().width)).toBeLessThanOrEqual(520);
+  // one line-width slider, scoped Editor / Both / Preview
+  const edW = () => page.locator('.cm-content').evaluate((el) => el.getBoundingClientRect().width);
+  const pvW = () => preview(page).evaluate((el) => getComputedStyle(el).getPropertyValue('--pv-width').trim());
+  await page.getByRole('radio', { name: 'Editor' }).click();
+  await page.getByLabel('Line width', { exact: true }).fill('520');
+  await expect.poll(edW).toBeLessThanOrEqual(520);
+  expect(await pvW()).toBe('760px');
+  await page.getByRole('radio', { name: 'Both' }).click(); // links both at the shown value
+  expect(await pvW()).toBe('520px');
+  await page.getByLabel('Line width', { exact: true }).fill('900');
+  expect(await pvW()).toBe('900px');
   await page.keyboard.press('Escape');
 
   const dl = page.waitForEvent('download');

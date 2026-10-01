@@ -177,7 +177,7 @@
 
 /* ---- dark ---- */
 [data-theme='dark'] .md {
-  --pv-bg: #0f0f11; --pv-text: #e6e6e9; --pv-muted: #9b9ba3; --pv-border: #2c2c32; --pv-subtle: #17171a; --pv-code-bg: #17171b;
+  --pv-bg: #17171a; --pv-text: #e6e6e9; --pv-muted: #9b9ba3; --pv-border: #2c2c32; --pv-subtle: #1e1e22; --pv-code-bg: #1e1e22;
   --pv-link: #8ab4ff; --pv-mark: #5c4f10; --pv-note: #58a6ff; --pv-tip: #3fb950; --pv-important: #a371f7; --pv-warning: #d29922; --pv-caution: #f85149;
   --hl-comment: #8b949e; --hl-keyword: #ff7b72; --hl-string: #a5d6ff; --hl-number: #79c0ff; --hl-title: #d2a8ff; --hl-attr: #ffa657; --hl-built: #7ee787;
 }

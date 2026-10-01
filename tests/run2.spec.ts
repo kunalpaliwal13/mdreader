@@ -70,6 +70,7 @@ test('outline jumps, wikilinks create + resolve, backlinks, autocomplete', async
   await page.waitForTimeout(150); // CodeMirror ignores Enter for 75ms after the list opens
   await page.keyboard.press('Enter');
   await expect(page.locator('.cm-content')).toContainText('See [[Welcome]]');
+  await expect(page.locator('.cm-content')).not.toContainText('[[Welcome]]]]');
 
   // Welcome now lists the mention
   await expect(page.locator('.status .save')).toHaveText('Saved', { timeout: 5000 });
