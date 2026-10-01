@@ -8,6 +8,8 @@ import welcome from './welcome.md?raw';
 export type Mode = 'edit' | 'split' | 'preview';
 export type Settings = {
   theme: 'system' | 'light' | 'dark';
+  /** base16 scheme id for app chrome + editor (see lib/schemes.ts) */
+  scheme: string;
   preset: 'github' | 'academic' | 'minimal' | 'sepia';
   font: 'preset' | 'sans' | 'serif' | 'mono';
   size: number;
@@ -24,7 +26,7 @@ export type Settings = {
 };
 export type SidebarView = 'files' | 'search' | 'outline';
 
-const DEFAULTS: Settings = { theme: 'system', preset: 'github', font: 'preset', size: 16, width: 760, mode: 'split', sidebar: true, sidebarWidth: 260, editMode: 'split', split: 50, editorWidth: 760 };
+const DEFAULTS: Settings = { theme: 'system', scheme: 'default', preset: 'github', font: 'preset', size: 16, width: 760, mode: 'split', sidebar: true, sidebarWidth: 260, editMode: 'split', split: 50, editorWidth: 760 };
 
 /** Animate a DOM-changing state update with the View Transitions API where available. */
 export function transition(update: () => void) {

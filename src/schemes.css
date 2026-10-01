@@ -1,0 +1,180 @@
+/* Base16 schemes for app chrome + editor (preview presets are deliberately untouched).
+   Palettes copied from medusa/website/src/styles/themes.css. Scheme = html[data-scheme], mode = html[data-theme]. */
+/* ---------- MEDUSA (house scheme) ---------- */
+html[data-scheme="medusa"][data-theme="dark"]{
+  --base00:#060D13; --base01:#0C1922; --base02:#13242F; --base03:#1D323C;
+  --base04:#7E97A3; --base05:#DEEBF0; --base06:#EAF4F8; --base07:#F5FBFD;
+  --base08:#FF6A55; --base09:#FF8E3C; --base0A:#FFB224; --base0B:#3EDC9E;
+  --base0C:#2FD4EE; --base0D:#4DA3FF; --base0E:#B39BFF; --base0F:#C98C68;
+}
+html[data-scheme="medusa"][data-theme="light"]{
+  --base00:#F4F8F9; --base01:#FFFFFF; --base02:#EDF3F5; --base03:#D9E4E9;
+  --base04:#54707E; --base05:#0E2029; --base06:#0A171E; --base07:#061014;
+  --base08:#C34A3A; --base09:#C86A15; --base0A:#B27404; --base0B:#0B9C6C;
+  --base0C:#0A93AD; --base0D:#1F6FEB; --base0E:#7C55E8; --base0F:#A0765A;
+}
+
+/* ---------- GRUVBOX (dark medium / light medium) ---------- */
+html[data-scheme="gruvbox"][data-theme="dark"]{
+  --base00:#282828; --base01:#3C3836; --base02:#504945; --base03:#665C54;
+  --base04:#BDAE93; --base05:#D5C4A1; --base06:#EBDBB2; --base07:#FBF1C7;
+  --base08:#FB4934; --base09:#FE8019; --base0A:#FABD2F; --base0B:#B8BB26;
+  --base0C:#8EC07C; --base0D:#83A598; --base0E:#D3869B; --base0F:#D65D0E;
+}
+html[data-scheme="gruvbox"][data-theme="light"]{
+  --base00:#FBF1C7; --base01:#EBDBB2; --base02:#D5C4A1; --base03:#BDAE93;
+  --base04:#665C54; --base05:#504945; --base06:#3C3836; --base07:#282828;
+  --base08:#9D0006; --base09:#AF3A03; --base0A:#B57614; --base0B:#79740E;
+  --base0C:#427B58; --base0D:#076678; --base0E:#8F3F71; --base0F:#D65D0E;
+}
+
+/* ---------- TOKYO NIGHT (dark / day) ---------- */
+html[data-scheme="tokyonight"][data-theme="dark"]{
+  --base00:#1A1B26; --base01:#1F2233; --base02:#2F3549; --base03:#444B6A;
+  --base04:#787C99; --base05:#A9B1D6; --base06:#CBCCD1; --base07:#D5D6DB;
+  --base08:#F7768E; --base09:#FF9E64; --base0A:#E0AF68; --base0B:#9ECE6A;
+  --base0C:#7DCFFF; --base0D:#7AA2F7; --base0E:#BB9AF7; --base0F:#DB4B4B;
+}
+html[data-scheme="tokyonight"][data-theme="light"]{
+  --base00:#E1E2E7; --base01:#D5D6DB; --base02:#C7C9D1; --base03:#9699A3;
+  --base04:#6C6F7E; --base05:#343B58; --base06:#232533; --base07:#1A1B26;
+  --base08:#F52A65; --base09:#B15C00; --base0A:#8F5E15; --base0B:#587539;
+  --base0C:#007197; --base0D:#2E7DE9; --base0E:#7847BD; --base0F:#8C4351;
+}
+
+/* ---------- CATPPUCCIN (mocha / latte) ---------- */
+html[data-scheme="catppuccin"][data-theme="dark"]{
+  --base00:#1E1E2E; --base01:#181825; --base02:#313244; --base03:#45475A;
+  --base04:#8B93B8; --base05:#CDD6F4; --base06:#F5E0DC; --base07:#B4BEFE;
+  --base08:#F38BA8; --base09:#FAB387; --base0A:#F9E2AF; --base0B:#A6E3A1;
+  --base0C:#94E2D5; --base0D:#89B4FA; --base0E:#CBA6F7; --base0F:#F2CDCD;
+}
+html[data-scheme="catppuccin"][data-theme="light"]{
+  --base00:#EFF1F5; --base01:#E6E9EF; --base02:#CCD0DA; --base03:#BCC0CC;
+  --base04:#6C6F85; --base05:#4C4F69; --base06:#3B3E54; --base07:#2A2D43;
+  --base08:#D20F39; --base09:#FE640B; --base0A:#B8860B; --base0B:#40A02B;
+  --base0C:#179299; --base0D:#1E66F5; --base0E:#8839EF; --base0F:#DD7878;
+}
+
+/* ---------- NORD (polar night / snow storm) ---------- */
+html[data-scheme="nord"][data-theme="dark"]{
+  --base00:#2E3440; --base01:#3B4252; --base02:#434C5E; --base03:#4C566A;
+  --base04:#9BA5B8; --base05:#E5E9F0; --base06:#ECEFF4; --base07:#8FBCBB;
+  --base08:#BF616A; --base09:#D08770; --base0A:#EBCB8B; --base0B:#A3BE8C;
+  --base0C:#88C0D0; --base0D:#81A1C1; --base0E:#B48EAD; --base0F:#5E81AC;
+}
+html[data-scheme="nord"][data-theme="light"]{
+  --base00:#ECEFF4; --base01:#E5E9F0; --base02:#D8DEE9; --base03:#AEB6C4;
+  --base04:#5B6778; --base05:#2E3440; --base06:#3B4252; --base07:#434C5E;
+  --base08:#A54049; --base09:#B25D3E; --base0A:#8F6B0B; --base0B:#5E7A4A;
+  --base0C:#3E7A8A; --base0D:#5272A0; --base0E:#8A6A92; --base0F:#4E6C94;
+}
+
+/* ---------- SOLARIZED (dark / light) ---------- */
+html[data-scheme="solarized"][data-theme="dark"]{
+  --base00:#002B36; --base01:#073642; --base02:#0E4450; --base03:#586E75;
+  --base04:#839496; --base05:#93A1A1; --base06:#EEE8D5; --base07:#FDF6E3;
+  --base08:#DC322F; --base09:#CB4B16; --base0A:#B58900; --base0B:#859900;
+  --base0C:#2AA198; --base0D:#268BD2; --base0E:#6C71C4; --base0F:#D33682;
+}
+html[data-scheme="solarized"][data-theme="light"]{
+  --base00:#FDF6E3; --base01:#EEE8D5; --base02:#E4DCC2; --base03:#93A1A1;
+  --base04:#657B83; --base05:#073642; --base06:#052B33; --base07:#002B36;
+  --base08:#DC322F; --base09:#CB4B16; --base0A:#8F6D00; --base0B:#667A00;
+  --base0C:#1E8A82; --base0D:#268BD2; --base0E:#6C71C4; --base0F:#D33682;
+}
+
+/* ---------- DRACULA (dracula / alucard) ---------- */
+html[data-scheme="dracula"][data-theme="dark"]{
+  --base00:#282A36; --base01:#313342; --base02:#44475A; --base03:#565A75;
+  --base04:#9DA9CE; --base05:#F8F8F2; --base06:#FBFBF7; --base07:#FFFFFF;
+  --base08:#FF5555; --base09:#FFB86C; --base0A:#F1FA8C; --base0B:#50FA7B;
+  --base0C:#8BE9FD; --base0D:#BD93F9; --base0E:#FF79C6; --base0F:#B45BCF;
+}
+html[data-scheme="dracula"][data-theme="light"]{
+  --base00:#FFFBEB; --base01:#FFFFFF; --base02:#F2ECDA; --base03:#D8D2C0;
+  --base04:#635D97; --base05:#1F1F1F; --base06:#14141B; --base07:#0B0B10;
+  --base08:#CB3A2A; --base09:#A34D14; --base0A:#846E15; --base0B:#14710A;
+  --base0C:#036A96; --base0D:#644AC9; --base0E:#A3144D; --base0F:#7B5C3E;
+}
+
+/* ---------- ONE DARK / ONE LIGHT (Atom) ---------- */
+html[data-scheme="onedark"][data-theme="dark"]{
+  --base00:#282C34; --base01:#313640; --base02:#3E4451; --base03:#545862;
+  --base04:#7F848E; --base05:#ABB2BF; --base06:#C8CCD4; --base07:#E6E6E6;
+  --base08:#E06C75; --base09:#D19A66; --base0A:#E5C07B; --base0B:#98C379;
+  --base0C:#56B6C2; --base0D:#61AFEF; --base0E:#C678DD; --base0F:#BE5046;
+}
+html[data-scheme="onedark"][data-theme="light"]{
+  --base00:#FAFAFA; --base01:#FFFFFF; --base02:#E5E5E6; --base03:#A0A1A7;
+  --base04:#696C77; --base05:#383A42; --base06:#202227; --base07:#090A0B;
+  --base08:#CA1243; --base09:#D75F00; --base0A:#C18401; --base0B:#50A14F;
+  --base0C:#0184BC; --base0D:#4078F2; --base0E:#A626A4; --base0F:#986801;
+}
+
+/* ---------- MONOKAI (classic / custom light) ---------- */
+html[data-scheme="monokai"][data-theme="dark"]{
+  --base00:#272822; --base01:#33342B; --base02:#49483E; --base03:#75715E;
+  --base04:#A59F85; --base05:#F8F8F2; --base06:#F5F4F1; --base07:#F9F8F5;
+  --base08:#F92672; --base09:#FD971F; --base0A:#F4BF75; --base0B:#A6E22E;
+  --base0C:#A1EFE4; --base0D:#66D9EF; --base0E:#AE81FF; --base0F:#CC6633;
+}
+html[data-scheme="monokai"][data-theme="light"]{
+  --base00:#FAFAF6; --base01:#FFFFFF; --base02:#EEEEE6; --base03:#CFCFC2;
+  --base04:#75715E; --base05:#2C2C26; --base06:#21211C; --base07:#161613;
+  --base08:#CE1F5E; --base09:#B85900; --base0A:#8F7A00; --base0B:#5E8E01;
+  --base0C:#178A7B; --base0D:#0E87BE; --base0E:#7A4FD6; --base0F:#A0521F;
+}
+
+/* ---------- EVERFOREST (dark medium / light medium) ---------- */
+html[data-scheme="everforest"][data-theme="dark"]{
+  --base00:#2D353B; --base01:#343F44; --base02:#3D484D; --base03:#4F585E;
+  --base04:#859289; --base05:#D3C6AA; --base06:#E1D8BE; --base07:#F0EADA;
+  --base08:#E67E80; --base09:#E69875; --base0A:#DBBC7F; --base0B:#A7C080;
+  --base0C:#83C092; --base0D:#7FBBB3; --base0E:#D699B6; --base0F:#C08F63;
+}
+html[data-scheme="everforest"][data-theme="light"]{
+  --base00:#FDF6E3; --base01:#FFFBEF; --base02:#EFEBD4; --base03:#BDC3AF;
+  --base04:#829181; --base05:#5C6A72; --base06:#4C5A61; --base07:#35464F;
+  --base08:#F85552; --base09:#F57D26; --base0A:#DFA000; --base0B:#8DA101;
+  --base0C:#35A77C; --base0D:#3A94C5; --base0E:#DF69BA; --base0F:#9B5A3C;
+}
+
+/* ---------- ROSÉ PINE (main / dawn) ---------- */
+html[data-scheme="rosepine"][data-theme="dark"]{
+  --base00:#191724; --base01:#1F1D2E; --base02:#26233A; --base03:#524F67;
+  --base04:#908CAA; --base05:#E0DEF4; --base06:#ECE9F7; --base07:#F7F5FD;
+  --base08:#EB6F92; --base09:#EA9A97; --base0A:#F6C177; --base0B:#31748F;
+  --base0C:#9CCFD8; --base0D:#3E8FB0; --base0E:#C4A7E7; --base0F:#D7827E;
+}
+html[data-scheme="rosepine"][data-theme="light"]{
+  --base00:#FAF4ED; --base01:#FFFAF3; --base02:#F2E9E1; --base03:#9893A5;
+  --base04:#797593; --base05:#575279; --base06:#4A4568; --base07:#26233A;
+  --base08:#B4637A; --base09:#D7827E; --base0A:#EA9D34; --base0B:#286983;
+  --base0C:#56949F; --base0D:#3E6E94; --base0E:#907AA9; --base0F:#9F7155;
+}
+
+/* ---------- map base16 slots onto app tokens (Default scheme keeps app.css values) ---------- */
+html[data-scheme]:not([data-scheme='default']) {
+  --bg: var(--base00);
+  --bg-subtle: color-mix(in srgb, var(--base00) 55%, var(--base01));
+  --bg-hover: color-mix(in srgb, var(--base01) 55%, var(--base02));
+  --bg-active: var(--base02);
+  --bg-elevated: var(--base01);
+  --border: color-mix(in srgb, var(--base02) 75%, var(--base01));
+  --border-strong: var(--base03);
+  --text: var(--base05);
+  --text-muted: color-mix(in srgb, var(--base04) 65%, var(--base05));
+  --text-faint: color-mix(in srgb, var(--base03) 45%, var(--base04));
+  --accent: var(--base0E);
+  --danger: var(--base08);
+}
+html[data-scheme]:not([data-scheme='default']) .editor {
+  --cm-link: var(--base0D);
+  --cm-code: var(--base0C);
+  --cm-keyword: var(--base0E);
+  --cm-string: var(--base0B);
+  --cm-number: var(--base09);
+  --cm-title: var(--base0D);
+  --cm-attr: var(--base0A);
+}

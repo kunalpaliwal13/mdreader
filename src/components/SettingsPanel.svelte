@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Sun, Moon, Monitor } from '@lucide/svelte';
+  import { Sun, Moon, Monitor, ChevronDown, Check } from '@lucide/svelte';
+  import { SCHEMES } from '../lib/schemes';
   import Panel from './Panel.svelte';
   import { app, type Settings } from '../lib/app.svelte';
 
@@ -11,6 +12,10 @@
     app.saveSettings();
   };
 
+  let schemesOpen = $state(false);
+  const mode = $derived(app.dark ? 'dark' : 'light');
+  const current = $derived(SCHEMES.find((x) => x.id === s.scheme) ?? SCHEMES[0]);
+
   const presets: { id: Settings['preset']; label: string; sample: string }[] = [
     { id: 'github', label: 'GitHub', sample: 'Aa' },
     { id: 'academic', label: 'Academic', sample: 'Aa' },
@@ -18,6 +23,12 @@
     { id: 'sepia', label: 'Sepia', sample: 'Aa' },
   ];
 </script>
+
+{#snippet swatch(sw: string[])}
+    <span class="swatch" style="background:{sw[0]}">
+      {#each sw.slice(1) as c, i (i)}<i style="background:{c}"></i>{/each}
+    </span>
+  {/snippet}
 
 <Panel title="Appearance" {onclose}>
   <div class="field">
@@ -27,6 +38,33 @@
       <button class:on={s.theme === 'light'} onclick={() => set('theme', 'light')}><Sun size={13} /> Light</button>
       <button class:on={s.theme === 'dark'} onclick={() => set('theme', 'dark')}><Moon size={13} /> Dark</button>
     </div>
+  </div>
+
+
+  <div class="field">
+    <span class="label">Color scheme <em>app &amp; editor</em></span>
+    <button class="scheme-btn" aria-expanded={schemesOpen} onclick={() => (schemesOpen = !schemesOpen)}>
+      {@render swatch(current.swatch[mode])}
+      <span class="scheme-name">{current.name}</span>
+      <span class="chev" class:open={schemesOpen}><ChevronDown size={14} /></span>
+    </button>
+    {#if schemesOpen}
+      <div class="schemes" role="listbox" aria-label="Color scheme">
+        {#each SCHEMES as sc (sc.id)}
+          <button
+            class="scheme"
+            class:on={sc.id === s.scheme}
+            role="option"
+            aria-selected={sc.id === s.scheme}
+            onclick={() => set('scheme', sc.id)}
+          >
+            {@render swatch(sc.swatch[mode])}
+            <span class="scheme-name">{sc.name}</span>
+            {#if sc.id === s.scheme}<Check size={14} />{/if}
+          </button>
+        {/each}
+      </div>
+    {/if}
   </div>
 
   <div class="group">Preview</div>
@@ -71,6 +109,24 @@
 </Panel>
 
 <style>
+  .scheme-btn, .scheme {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 5px 8px 5px 5px; border-radius: 8px;
+    background: none; color: var(--text); cursor: pointer; text-align: left; font-size: 12.5px;
+  }
+  .scheme-btn { border: 1px solid var(--border-strong); background: var(--bg); }
+  .scheme-btn:hover, .scheme:hover { background: var(--bg-hover); }
+  .scheme { border: 0; color: var(--text-muted); }
+  .scheme.on { color: var(--text); font-weight: 550; }
+  .scheme :global(svg) { color: var(--accent); }
+  .scheme-name { flex: 1; }
+  .chev { display: inline-grid; color: var(--text-faint); transition: transform .15s; }
+  .chev.open { transform: rotate(180deg); }
+  .schemes { display: flex; flex-direction: column; gap: 1px; padding: 4px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); animation: pop .12s ease-out; }
+  .swatch {
+    flex: none; display: grid; grid-template-columns: 7px 7px; gap: 3px; place-content: center; width: 26px; height: 26px;
+    border-radius: 7px; box-shadow: inset 0 0 0 1px rgb(128 128 128 / .25);
+  }
+  .swatch i { width: 7px; height: 7px; border-radius: 50%; }
   .group { margin: 4px 0 8px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 11px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; }
   .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
   .field:last-child { margin-bottom: 0; }

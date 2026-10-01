@@ -159,7 +159,9 @@
 </div>
 
 <style>
-  .scroller { height: 100%; overflow-y: auto; background: var(--pv-bg, var(--bg)); }
+  /* preview keeps its preset colors whatever the app scheme is */
+  .scroller { height: 100%; overflow-y: auto; background: #ffffff; }
+  :global([data-theme='dark']) .scroller { background: #0f0f11; }
   .scroller:has(:global(.preset-sepia)) { background: #f8f1e3; }
   :global([data-theme='dark']) .scroller:has(:global(.preset-sepia)) { background: #1e1913; }
 </style>

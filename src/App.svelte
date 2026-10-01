@@ -22,6 +22,7 @@
   $effect(() => {
     app.dark = app.settings.theme === 'dark' || (app.settings.theme === 'system' && systemDark);
     document.documentElement.dataset.theme = app.dark ? 'dark' : 'light';
+    document.documentElement.dataset.scheme = app.settings.scheme;
   });
 
   $effect(() => {
