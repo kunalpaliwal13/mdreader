@@ -192,7 +192,8 @@
     if (href.startsWith('#')) {
       e.preventDefault();
       const id = decodeURIComponent(href.slice(1));
-      article.querySelector(`[id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // instant: a smooth scroll ends short when lazy images above load mid-way
+      article.querySelector(`[id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'start' });
       return;
     }
     const target = resolveRel(path, href);
