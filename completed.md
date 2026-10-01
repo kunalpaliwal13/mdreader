@@ -76,7 +76,8 @@
 
 ## Later
 
-- [ ] Storage fallback for private windows
+- [x] Storage fallback for private windows: no OPFS (Safari / Firefox private browsing) → notes live in memory
+      for the tab, with a notice and a "Private window — not kept" status chip
 - [ ] Open a real folder on disk (Chromium)
 - [ ] Custom CSS and per-file theme via front matter
 - [ ] Version history per file

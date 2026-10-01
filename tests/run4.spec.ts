@@ -280,3 +280,20 @@ test('vim keys: Settings switch, mode in the status bar, normal-mode editing, pa
   await page.keyboard.type('k');
   expect(await text()).toBe('one\nXthreek');
 });
+
+test('private window (no OPFS): notes live in memory, with a notice', async ({ browser, browserName, baseURL }) => {
+  test.skip(browserName !== 'webkit', "WebKit's ephemeral contexts are the ones without OPFS");
+  const ctx = await browser.newContext({ baseURL, serviceWorkers: 'block' });
+  const page = await ctx.newPage();
+  await ready(page);
+  await expect(page.locator('.status')).toContainText('Private window');
+  await create(page, 'file', 'mem');
+  await replaceDoc(page, '# In memory\n');
+  await expect(page.locator('.row[data-path="mem.md"]')).toHaveCount(1);
+  await expect(preview(page).locator('h1')).toHaveText('In memory');
+  // trash + restore work too
+  await page.locator('.row[data-path="mem.md"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Move to trash' }).click();
+  await expect(page.locator('.row[data-path="mem.md"]')).toHaveCount(0);
+  await ctx.close();
+});

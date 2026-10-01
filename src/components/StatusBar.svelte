@@ -14,7 +14,11 @@
 </script>
 
 <footer class="status">
-  <span class="save {app.saveState}"><i></i>{label[app.saveState]}</span>
+  {#if app.storage === 'memory'}
+    <span class="save mem" title="This private window can't store files. Use Export (download icon) to keep your notes."><i></i>Private window — not kept</span>
+  {:else}
+    <span class="save {app.saveState}"><i></i>{label[app.saveState]}</span>
+  {/if}
   {#if app.active}
     {#if app.settings.plain}<button class="chip" title="Smart typing paused — click to restore" onclick={() => app.togglePlain()}>Plain</button>{/if}
     {#if app.vimMode && app.mode !== 'preview'}<span class="vim" title="Vim keys (Settings → Editor)">{app.vimMode.toUpperCase()}</span>{/if}
@@ -48,4 +52,6 @@
   .save.unsaved i, .save.saving i { background: #f59e0b; }
   .save.error { color: var(--danger); }
   .save.error i { background: var(--danger); }
+  .save.mem { color: #b45309; }
+  .save.mem i { background: #f59e0b; }
 </style>

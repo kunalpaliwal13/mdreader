@@ -92,6 +92,8 @@ class App {
   panel = $state<'trash' | 'settings' | null>(null);
   headings = $state<Heading[]>([]);
   palette = $state<{ open: boolean; query: string }>({ open: false, query: '' });
+  /** 'memory' in private windows (no OPFS): notes last until the tab closes */
+  storage = $state<'opfs' | 'memory'>('opfs');
   /** Vim mode shown in the status bar ('' when Vim keys are off) */
   vimMode = $state('');
   /** the sidebar search box (kept while switching sidebar views; #tag clicks fill it) */
@@ -309,9 +311,11 @@ class App {
   }
 
   async init() {
+    this.storage = await fs.storage();
+    if (this.storage === 'memory') this.notify("Private window: notes stay only until you close this tab — export them to keep them", 'error');
     await this.refresh();
     const seeded = load<{ v: boolean }>('mdr.seeded', { v: false }).v;
-    if (!this.entries.length && !seeded) {
+    if (!this.entries.length && (!seeded || this.storage === 'memory')) {
       await fs.write('Welcome.md', welcome);
       persist('mdr.seeded', { v: true });
       await this.refresh();

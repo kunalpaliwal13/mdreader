@@ -88,4 +88,4 @@ npm run build && npm test                        # smoke tests against dist/
 | Appearance | Gear icon (bottom-left; More → Appearance on phones): preview style, font, size, line width (editor / both / preview), mode, color scheme |
 | Phone | Bottom bar: Files, Search, Edit/Preview, Outline, More (Plain, theme, export, Appearance, Trash); tap the title to switch files |
 
-Note: private/incognito windows in Safari don't provide browser storage, so files can't be saved there.
+Note: private windows in Safari and Firefox have no browser file storage, so mdreader keeps notes in memory there (the status bar says "Private window — not kept"); export anything you want to keep before closing the tab.

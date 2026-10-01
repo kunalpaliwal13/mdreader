@@ -6,8 +6,73 @@ export type Entry = { path: string; kind: 'file' | 'dir' };
 export type TrashEntry = { id: string; path: string; kind: 'file' | 'dir'; deletedAt: number };
 
 const TRASH = '.trash';
+
+// ---- in-memory stand-in for private windows (Safari / Firefox private browsing have no OPFS) ----
+// Implements just the handle methods used below, so every op works unchanged; files vanish with the tab.
+class MemFile {
+  kind = 'file' as const;
+  bytes = new Uint8Array(0);
+  constructor(public name: string) {}
+  async getFile() {
+    return new Blob([this.bytes]);
+  }
+  async createSyncAccessHandle() {
+    return {
+      write: (b: Uint8Array, o: { at: number }) => {
+        const next = new Uint8Array(Math.max(this.bytes.length, o.at + b.length));
+        next.set(this.bytes);
+        next.set(b, o.at);
+        this.bytes = next;
+      },
+      truncate: (n: number) => void (this.bytes = this.bytes.slice(0, n)),
+      flush: () => {},
+      close: () => {},
+    };
+  }
+}
+class MemDir {
+  kind = 'directory' as const;
+  items = new Map<string, MemDir | MemFile>();
+  constructor(public name: string) {}
+  private get<T extends MemDir | MemFile>(name: string, make: (() => T) | null, kind: T['kind']): T {
+    let h = this.items.get(name);
+    if (!h && make) this.items.set(name, (h = make()));
+    if (!h || h.kind !== kind) throw new DOMException(`${name} not found`, 'NotFoundError');
+    return h as T;
+  }
+  async getDirectoryHandle(name: string, o?: { create?: boolean }) {
+    return this.get(name, o?.create ? () => new MemDir(name) : null, 'directory');
+  }
+  async getFileHandle(name: string, o?: { create?: boolean }) {
+    return this.get(name, o?.create ? () => new MemFile(name) : null, 'file');
+  }
+  async removeEntry(name: string) {
+    if (!this.items.delete(name)) throw new DOMException(`${name} not found`, 'NotFoundError');
+  }
+  async *entries() {
+    yield* [...this.items];
+  }
+  async *keys() {
+    yield* [...this.items.keys()];
+  }
+}
+
+/** OPFS when it really works (a probe write through a sync access handle), else memory. */
+async function open(): Promise<FileSystemDirectoryHandle> {
+  try {
+    const d = await navigator.storage.getDirectory();
+    const h = await (await d.getFileHandle('.probe', { create: true })).createSyncAccessHandle();
+    h.close();
+    await d.removeEntry('.probe');
+    return d;
+  } catch {
+    memory = true;
+    return new MemDir('') as unknown as FileSystemDirectoryHandle;
+  }
+}
+let memory = false;
 let rootP: Promise<FileSystemDirectoryHandle> | null = null;
-const root = () => (rootP ??= navigator.storage.getDirectory());
+const root = () => (rootP ??= open());
 
 const split = (p: string) => p.split('/').filter(Boolean);
 
@@ -161,7 +226,13 @@ async function emptyTrash() {
   if (await exists(TRASH)) await removeRaw(TRASH);
 }
 
-const ops = { list, read, readBytes, write, mkdir, move, copy, trash, listTrash, restore, purge, emptyTrash, exists, uniquePath };
+/** 'memory' in private windows: nothing outlives the tab. */
+async function storage(): Promise<'opfs' | 'memory'> {
+  await root();
+  return memory ? 'memory' : 'opfs';
+}
+
+const ops = { list, read, readBytes, write, mkdir, move, copy, trash, listTrash, restore, purge, emptyTrash, exists, uniquePath, storage };
 export type Ops = typeof ops;
 
 // Serialize everything: sync access handles are exclusive per file.
