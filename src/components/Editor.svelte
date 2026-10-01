@@ -289,12 +289,29 @@
     '.cm-tag': { color: 'var(--accent)', backgroundColor: 'var(--accent-soft)', borderRadius: '4px', padding: '0 1px' },
   });
 
+  // Vim keys: loaded on first use; highest precedence so normal-mode keys never reach the table/list keymaps
+  // (insert mode passes Tab / Enter through to them)
+  const vimC = new Compartment();
+  let vimMod: typeof import('@replit/codemirror-vim') | null = null;
+  const vimExt = (): Extension => (app.settings.vim && vimMod ? Prec.highest(vimMod.vim()) : []);
+  function watchVim() {
+    const cm = app.settings.vim ? vimMod?.getCM(view) : null;
+    app.vimMode = cm ? 'normal' : '';
+    cm?.on('vim-mode-change', (e: { mode: string; subMode?: string }) => (app.vimMode = e.mode + (e.subMode ? ' ' + e.subMode : '')));
+  }
+  async function applyVim() {
+    if (app.settings.vim && !vimMod) vimMod = await import('@replit/codemirror-vim');
+    view.dispatch({ effects: vimC.reconfigure(vimExt()) });
+    watchVim();
+  }
+
   // everything the Plain toggle turns off
   const smartC = new Compartment();
   const smart = (): Extension[] =>
     app.settings.plain ? [] : smartTyping([autocompletion({ override: [wikiComplete, tagComplete, slashComplete], icons: false }), Prec.high(keymap.of(tableKeymap))]);
 
   const extensions: Extension[] = [
+    vimC.of([]),
     history(),
     drawSelection(),
     dropCursor(),
@@ -360,7 +377,8 @@
     current = p;
     const s = stateFor(p);
     view.setState(s);
-    view.dispatch({ effects: smartC.reconfigure(smart()) });
+    view.dispatch({ effects: [smartC.reconfigure(smart()), vimC.reconfigure(vimExt())] });
+    watchVim();
     const head = s.selection.main.head;
     const line = s.doc.lineAt(head);
     app.cursor = { line: line.number, col: head - line.from + 1 };
@@ -419,6 +437,11 @@
   $effect(() => {
     void app.settings.plain;
     view?.dispatch({ effects: smartC.reconfigure(smart()) });
+  });
+
+  $effect(() => {
+    void app.settings.vim;
+    if (view) applyVim();
   });
 
   onDestroy(() => {

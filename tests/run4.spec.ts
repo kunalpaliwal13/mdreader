@@ -249,3 +249,34 @@ test('bookmarks (file + heading), recents first in ⌘P, pinned tabs, reopen clo
   await expect(page.locator('.tabs .tab', { hasText: 'Beta' }).getByRole('button', { name: 'Unpin tab' })).toHaveCount(1);
   await expect(page.locator('.mark')).toHaveText([/Deep section/]);
 });
+
+test('vim keys: Settings switch, mode in the status bar, normal-mode editing, palette turns it off', async ({ page }) => {
+  await ready(page);
+  await create(page, 'file', 'vimdoc');
+  await replaceDoc(page, 'one\ntwo\nthree');
+  const text = () => page.locator('.cm-content').evaluate((el: HTMLElement & { cmTile?: { view: { state: { doc: { toString(): string } } } } }) => el.cmTile!.view.state.doc.toString());
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('switch', { name: 'Vim keys' }).click();
+  await expect(page.getByRole('switch', { name: 'Vim keys' })).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('Escape');
+  await page.locator('.cm-content').click();
+  const mode = page.locator('.status .vim');
+  await expect(mode).toHaveText('NORMAL');
+  for (const k of ['g', 'g', 'j', 'd', 'd']) await page.keyboard.press(k);
+  expect(await text()).toBe('one\nthree');
+  await page.keyboard.press('i');
+  await expect(mode).toHaveText('INSERT');
+  await page.keyboard.type('X');
+  await page.keyboard.press('Escape');
+  await expect(mode).toHaveText('NORMAL');
+  expect(await text()).toBe('one\nXthree');
+
+  await page.keyboard.press('ControlOrMeta+Shift+p');
+  await page.getByLabel('Palette query').fill('>vim');
+  await page.keyboard.press('Enter');
+  await expect(mode).toHaveCount(0);
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('k');
+  expect(await text()).toBe('one\nXthreek');
+});

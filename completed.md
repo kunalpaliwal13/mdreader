@@ -72,6 +72,7 @@
 - [x] Bookmarks (files, folders, headings) at the top of Files — from the tree / tab / outline menus, palette or
       `⌘/Ctrl+Shift+B`; ⌘P lists recently opened files first; pinned tabs (tab menu) sit first and don't close by
       accident; Close others; Reopen closed tab (tab menu / palette)
+- [x] Vim keys: Settings → Editor switch or palette; NORMAL / INSERT / VISUAL in the status bar; loads only when on
 
 ## Later
 

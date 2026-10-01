@@ -89,6 +89,13 @@
     <output>{width}</output>
   </div>
 
+  <div class="group">Editor</div>
+
+  <div class="row">
+    <span class="label">Vim keys</span>
+    <button class="switch" role="switch" aria-checked={s.vim} aria-label="Vim keys" onclick={() => set('vim', !s.vim)}><i></i></button>
+  </div>
+
   <div class="group">Theme</div>
 
   <div class="row">
@@ -165,6 +172,13 @@
   :global([data-theme='dark']) .p-sepia { background: #1e1913; color: #a8977f; }
   :global([data-theme='dark']) .p-sepia .sample { color: #e8dcc8; }
 
+  .switch {
+    position: relative; width: 30px; height: 18px; padding: 0; border: 0; border-radius: 9px; cursor: pointer;
+    background: var(--border-strong); transition: background .15s;
+  }
+  .switch i { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .25); transition: transform .15s; }
+  .switch[aria-checked='true'] { background: var(--accent); }
+  .switch[aria-checked='true'] i { transform: translateX(12px); }
   .slider { display: flex; align-items: center; gap: 8px; flex: 1; max-width: 150px; }
   .slider.full { max-width: none; margin: -2px 0 8px; }
   .slider output { min-width: 30px; text-align: right; font-size: 11px; color: var(--text-faint); font-variant-numeric: tabular-nums; }

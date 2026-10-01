@@ -17,6 +17,7 @@
   <span class="save {app.saveState}"><i></i>{label[app.saveState]}</span>
   {#if app.active}
     {#if app.settings.plain}<button class="chip" title="Smart typing paused — click to restore" onclick={() => app.togglePlain()}>Plain</button>{/if}
+    {#if app.vimMode && app.mode !== 'preview'}<span class="vim" title="Vim keys (Settings → Editor)">{app.vimMode.toUpperCase()}</span>{/if}
     <span class="spacer"></span>
     {#if app.mode !== 'preview' && !app.narrow}<span>Ln {app.cursor.line}, Col {app.cursor.col}</span>{/if}
     <span>{words.toLocaleString()} {words === 1 ? 'word' : 'words'}</span>
@@ -25,6 +26,7 @@
 </footer>
 
 <style>
+  .vim { font-family: var(--mono); font-size: 10px; letter-spacing: .04em; color: var(--accent); }
   .status {
     display: flex;
     align-items: center;

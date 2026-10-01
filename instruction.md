@@ -79,6 +79,7 @@ npm run build && npm test                        # smoke tests against dist/
 | Multi-cursor, lines | `⌘/Ctrl`-click adds a cursor; `Alt`-drag selects a column; `Alt+↑/↓` moves lines |
 | Fold | Hover a heading, list item, code block or quote and click the chevron; palette → Fold all / Unfold all; click a callout's title in the preview |
 | Tables | Type `\| Name \| Age \|` and Enter; Tab / Shift-Tab / Enter move between cells and align; the toolbar above the table aligns columns and adds, moves or deletes rows and columns |
+| Vim keys | Settings → Editor → Vim keys (or palette → Turn on Vim keys); the mode shows in the status bar |
 | Bookmarks | Right-click a file, tab or outline heading → Bookmark (or `⌘/Ctrl+Shift+B`); they list at the top of Files |
 | Tabs | Right-click a tab: Pin, Bookmark, Close, Close others, Reopen closed tab; middle-click closes; `⌘P` shows recent files first |
 | Daily note | Calendar icon in the sidebar header or palette → Open today's daily note (`Daily/YYYY-MM-DD.md`) |
