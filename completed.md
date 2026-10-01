@@ -31,13 +31,30 @@
 - [x] Tree keyboard navigation (arrows, Enter, F2, Delete)
 - [x] Faster first load: KaTeX and highlight.js load only when a document needs them
 - [x] Editor line width setting (Settings → Editor), alongside the preview's
-- [x] Fix: bold/italic starting with `+` (e.g. `**+ FP8**` in tables) now renders
+- [x] Fix: bold/italic starting with `+` (e.g. `**+ FP8**` in tables) now renders (the `++insert++` syntax is off — it caused this)
 - [x] 30 smoke tests across Chromium, WebKit, Firefox
 
-## Next — run 3 (candidates)
+## Run 3 — editor (in progress, 2026-10-01)
 
-- [ ] Base16 app/editor themes: Medusa, Gruvbox, Tokyo Night, Catppuccin, Nord, Solarized, Dracula, One Dark,
-      Monokai, Everforest, Rosé Pine (light/dark variants)
+- [x] Color schemes for the app and editor: Default, Obsidian, Gruvbox, Tokyo Night, Catppuccin, Nord, Solarized,
+      Dracula, One Dark, Monokai, Everforest, Rosé Pine (light + dark); the preview keeps its own style
+- [x] Compact Appearance panel: steppers for preview style and colors, one line-width slider scoped to
+      Editor / Both / Preview; lighter default dark background
+- [x] Plain editor toggle (`⌘/Ctrl+Shift+E`, pilcrow button): pauses auto-pair, wrap-selection, slash menu and
+      autocomplete so pasted or hand-typed markdown is never altered
+- [x] Power editing: auto-pair brackets/backticks, typing `*` `_` `~` `=` `` ` `` around a selection wraps it,
+      multi-cursor (`⌘/Ctrl`-click, `Alt`-drag for columns)
+- [x] Paste from web pages, Google Docs, Notion as markdown; `⌘/Ctrl+Shift+V` pastes plain text
+- [x] Slash menu (`/` at line start): headings, lists, callouts, code/math/Mermaid blocks, table, details, TOC,
+      links, footnote, date/time
+- [x] Phone layout: top bar with file switcher, bottom bar (Files, Search, Edit/Preview, Outline, More),
+      menus and panels as bottom sheets, larger touch targets
+- [x] Folding: chevron beside headings, list items, code blocks and quotes on hover; Fold all / Unfold all in the
+      palette (`Ctrl+Alt+[` / `]`); callouts fold in the preview by clicking their title
+- [ ] Table editor, Live Preview editor
+
+## Later
+
 - [ ] Storage fallback for private windows
 - [ ] Open a real folder on disk (Chromium)
 - [ ] Custom CSS and per-file theme via front matter

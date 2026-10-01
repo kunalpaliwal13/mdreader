@@ -24,6 +24,7 @@
       app.headings = parsed.headings;
       el.querySelectorAll('input[type=checkbox]').forEach((i) => i.removeAttribute('disabled'));
       article.replaceChildren(...el.childNodes);
+      reapplyFolds(job.path);
       if (job.path !== lastPath) scroller.scrollTop = 0;
       lastPath = job.path;
     } finally {
@@ -103,8 +104,24 @@
     app.edit(path, from, from + src.length, next);
   }
 
+  // callouts fold by clicking their title; remembered across re-renders by source line
+  const foldedAlerts = new Set<string>();
+  const reapplyFolds = (p: string) => {
+    for (const a of article.querySelectorAll<HTMLElement>('.markdown-alert[data-sourcepos]'))
+      a.classList.toggle('folded', foldedAlerts.has(p + '@' + parseInt(a.dataset.sourcepos!)));
+  };
+
   function onClick(e: MouseEvent) {
     const t = e.target as HTMLElement;
+    const title = t.closest('.markdown-alert-title');
+    if (title) {
+      const alert = title.parentElement!;
+      const key = path + '@' + parseInt(alert.dataset.sourcepos ?? '0');
+      if (foldedAlerts.has(key)) foldedAlerts.delete(key);
+      else foldedAlerts.add(key);
+      alert.classList.toggle('folded');
+      return;
+    }
     if (t instanceof HTMLInputElement && t.type === 'checkbox') {
       e.preventDefault();
       return toggleTask(t);

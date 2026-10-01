@@ -114,6 +114,7 @@ input { font: inherit; color: inherit; }
 @media (max-width: 760px) {
   .cm-editor .cm-line { padding: 0 16px !important; }
   .cm-editor .cm-content { padding-top: 20px !important; }
+  .cm-editor .cm-gutters { display: none; } /* no room for a fold gutter; palette has Fold all */
 }
 
 /* view transitions: mode switch (workspace) + theme switch (root) */

@@ -70,8 +70,14 @@ npm run build && npm test                        # smoke tests against dist/
 | Install / offline | Browser's install button (or command palette → Install); works offline after first visit |
 | Sidebar | `⌘/Ctrl+\`; tree supports arrow keys, Enter, F2, Delete |
 | Save now | `⌘/Ctrl+S` (autosave runs ~0.5s after typing) |
-| Formatting | `⌘/Ctrl+B` bold, `⌘/Ctrl+I` italic, `⌘/Ctrl+K` link |
+| Formatting | `⌘/Ctrl+B` bold, `⌘/Ctrl+I` italic, `⌘/Ctrl+K` link; select text and type `*` `_` `~` `=` or `` ` `` to wrap it |
+| Insert blocks | Type `/` at the start of a line (headings, lists, callouts, code, math, Mermaid, table, TOC, date…) |
+| Plain editor | Pilcrow button next to Preview or `⌘/Ctrl+Shift+E`: pauses auto-pair, slash menu and suggestions |
+| Paste | Web pages / Docs / Notion paste as markdown; `⌘/Ctrl+Shift+V` pastes plain text |
+| Multi-cursor, lines | `⌘/Ctrl`-click adds a cursor; `Alt`-drag selects a column; `Alt+↑/↓` moves lines |
+| Fold | Hover a heading, list item, code block or quote and click the chevron; palette → Fold all / Unfold all; click a callout's title in the preview |
 | Table of contents | Put `[[toc]]` on its own line |
-| Appearance | Gear icon: theme; preview style, font, size, line width; editor line width |
+| Appearance | Gear icon (bottom-left; More → Appearance on phones): preview style, font, size, line width (editor / both / preview), mode, color scheme |
+| Phone | Bottom bar: Files, Search, Edit/Preview, Outline, More (Plain, theme, export, Appearance, Trash); tap the title to switch files |
 
 Note: private/incognito windows in Safari don't provide browser storage, so files can't be saved there.

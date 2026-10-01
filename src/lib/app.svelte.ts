@@ -1,3 +1,4 @@
+import type { Command } from '@codemirror/view';
 import { SvelteSet } from 'svelte/reactivity';
 import { flushSync, tick } from 'svelte';
 import type { EditorState } from '@codemirror/state';
@@ -85,6 +86,7 @@ class App {
   scrollEditorTo: ((line: number) => void) | null = null;
   scrollPreviewTo: ((line: number) => void) | null = null;
   focusEditorLine: ((line: number) => void) | null = null;
+  runEditor: ((cmd: Command) => void) | null = null;
 
   dark = $state(false);
   /** Phone-width layout: no split view (two panes don't fit), sidebar as overlay. */

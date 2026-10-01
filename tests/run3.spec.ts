@@ -191,3 +191,29 @@ test('phone: top bar, bottom bar, drawer and sheets', async ({ page }) => {
   await page.getByRole('button', { name: 'Switch file' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
 });
+
+test('folding: headings in the editor, callouts in the preview', async ({ page }) => {
+  await ready(page);
+  await newDoc(page, 'fold');
+  await page.keyboard.type('# One\n\nalpha\n\n# Two\n\nbeta\n\n> [!NOTE]\nhidden text'); // Enter continues the "> "
+  // fold "# One" from the chevron that appears beside the hovered line
+  await page.locator('.cm-line', { hasText: 'One' }).hover();
+  const chevron = page.locator('.cm-gutterElement.cm-hover .cm-fold-marker');
+  await expect(chevron).toHaveCSS('opacity', '1');
+  await chevron.click();
+  await expect(page.locator('.cm-foldPlaceholder')).toHaveCount(1);
+  await expect(page.locator('.cm-content')).not.toContainText('alpha');
+  await expect(page.locator('.cm-content')).toContainText('beta');
+  await page.locator('.cm-foldPlaceholder').click(); // unfold
+  await expect(page.locator('.cm-content')).toContainText('alpha');
+
+  // callout folds in the preview and stays folded while typing
+  const alert = preview(page).locator('.markdown-alert');
+  await alert.locator('.markdown-alert-title').click();
+  await expect(alert).toHaveClass(/folded/);
+  await expect(alert.getByText('hidden text')).toBeHidden();
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type(' more');
+  await expect(preview(page).locator('.markdown-alert')).toHaveClass(/folded/);
+});

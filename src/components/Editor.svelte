@@ -1,14 +1,17 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { EditorState, EditorSelection, Compartment, type Extension } from '@codemirror/state';
-  import { EditorView, keymap, drawSelection, dropCursor, highlightActiveLine, placeholder, rectangularSelection, crosshairCursor, type Command } from '@codemirror/view';
+  import { EditorState, EditorSelection, Compartment, StateField, StateEffect, RangeSet, type Extension } from '@codemirror/state';
+  import {
+    EditorView, keymap, drawSelection, dropCursor, highlightActiveLine, placeholder, rectangularSelection, crosshairCursor,
+    ViewPlugin, GutterMarker, gutterLineClass, type Command,
+  } from '@codemirror/view';
   import { smartTyping } from '../lib/editor/smart';
   import { slashComplete } from '../lib/editor/slash';
   import { isRichHtml, htmlToMarkdown } from '../lib/editor/htmlPaste';
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
   import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBackward } from '@codemirror/lang-markdown';
   import { languages } from '@codemirror/language-data';
-  import { syntaxHighlighting, HighlightStyle, indentOnInput, bracketMatching } from '@codemirror/language';
+  import { syntaxHighlighting, HighlightStyle, indentOnInput, bracketMatching, foldGutter, foldKeymap } from '@codemirror/language';
   import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search';
   import { tags as t } from '@lezer/highlight';
   import { autocompletion, type CompletionContext } from '@codemirror/autocomplete';
@@ -157,6 +160,31 @@
     },
   });
 
+  // Obsidian-style: the fold chevron shows beside the line under the pointer (folded ones always show)
+  const setHover = StateEffect.define<number>();
+  const hoverLine = StateField.define<number>({
+    create: () => -1,
+    update: (v, tr) => tr.effects.reduce((v, e) => (e.is(setHover) ? e.value : v), tr.docChanged ? -1 : v),
+  });
+  class HoverMark extends GutterMarker { elementClass = 'cm-hover'; }
+  const hoverMark = new HoverMark();
+  const foldHover: Extension = [
+    hoverLine,
+    gutterLineClass.compute([hoverLine], (s) => (s.field(hoverLine) < 0 ? RangeSet.empty : RangeSet.of(hoverMark.range(s.field(hoverLine))))),
+    ViewPlugin.define((v) => {
+      const set = (p: number) => p !== v.state.field(hoverLine) && v.dispatch({ effects: setHover.of(p) });
+      const move = (e: MouseEvent) => {
+        const y = e.clientY - v.documentTop;
+        const b = v.lineBlockAtHeight(y);
+        set(y >= b.top && y <= b.bottom ? b.from : -1);
+      };
+      const leave = () => set(-1);
+      v.dom.addEventListener('mousemove', move);
+      v.dom.addEventListener('mouseleave', leave);
+      return { destroy: () => (v.dom.removeEventListener('mousemove', move), v.dom.removeEventListener('mouseleave', leave)) };
+    }),
+  ];
+
   const highlight = HighlightStyle.define([
     { tag: t.heading1, fontSize: '1.3em', fontWeight: '650' },
     { tag: t.heading2, fontSize: '1.15em', fontWeight: '650' },
@@ -179,9 +207,17 @@
 
   const theme = EditorView.theme({
     '&': { height: '100%', fontSize: '14px', backgroundColor: 'var(--bg)', color: 'var(--text)' },
-    '.cm-scroller': { fontFamily: 'var(--mono)', lineHeight: '1.7', overflow: 'auto' },
-    '.cm-content': { padding: '40px 0 50vh', maxWidth: 'var(--ed-width, 760px)', margin: '0 auto', caretColor: 'var(--accent)' },
-    '.cm-line': { padding: '0 32px' },
+    // the 18px fold gutter takes 22px of the line's left padding, so the text column stays centred and the chevron sits by the text
+    '.cm-scroller': { fontFamily: 'var(--mono)', lineHeight: '1.7', overflow: 'auto', paddingLeft: 'max(0px, calc((100% - var(--ed-width, 760px)) / 2 + 4px))' },
+    '.cm-content': { padding: '40px 0 50vh', maxWidth: 'calc(var(--ed-width, 760px) - 22px)', margin: '0', caretColor: 'var(--accent)' },
+    '.cm-gutters': { backgroundColor: 'transparent', border: 'none', color: 'var(--text-faint)' },
+    '.cm-foldGutter .cm-gutterElement': { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '18px', cursor: 'pointer' },
+    '.cm-fold-marker': { display: 'inline-grid', placeItems: 'center', width: '16px', height: '16px', borderRadius: '4px', opacity: '0', transition: 'opacity .12s, transform .12s' },
+    '.cm-fold-marker.closed': { opacity: '1', transform: 'rotate(-90deg)', color: 'var(--accent)' },
+    '.cm-hover .cm-fold-marker': { opacity: '1' },
+    '.cm-fold-marker:hover': { backgroundColor: 'var(--bg-hover)', color: 'var(--text)' },
+    '.cm-foldPlaceholder': { backgroundColor: 'var(--bg-hover)', border: 'none', color: 'var(--text-muted)', borderRadius: '4px', padding: '0 6px', margin: '0 4px', fontFamily: 'var(--font)' },
+    '.cm-line': { padding: '0 32px 0 10px' },
     '&.cm-focused': { outline: 'none' },
     '.cm-cursor': { borderLeftColor: 'var(--accent)', borderLeftWidth: '2px' },
     '.cm-activeLine': { backgroundColor: 'color-mix(in srgb, var(--bg-hover) 60%, transparent)' },
@@ -229,6 +265,16 @@
     markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: false }),
     syntaxHighlighting(highlight),
     placeholder('Start writing…'),
+    foldGutter({
+      markerDOM: (open) => {
+        const el = document.createElement('span');
+        el.className = 'cm-fold-marker' + (open ? '' : ' closed');
+        el.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+        el.title = open ? 'Fold' : 'Unfold';
+        return el;
+      },
+    }),
+    foldHover,
     EditorState.allowMultipleSelections.of(true),
     rectangularSelection(),
     crosshairCursor(),
@@ -242,6 +288,7 @@
       { key: 'Mod-i', run: wrap('*') },
       { key: 'Mod-k', run: link },
       { key: 'Mod-Shift-x', run: wrap('~~') },
+      ...foldKeymap,
       ...searchKeymap,
       ...historyKeymap,
       ...defaultKeymap,
@@ -308,6 +355,7 @@
     view = new EditorView({ state: stateFor(path), parent: host });
     view.scrollDOM.addEventListener('scroll', () => requestAnimationFrame(onScroll), { passive: true });
     app.scrollEditorTo = scrollToLine;
+    app.runEditor = (cmd) => (cmd(view), view.focus());
     app.focusEditorLine = (l) => {
       const line = view.state.doc.line(Math.min(view.state.doc.lines, Math.max(1, l)));
       view.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 60 }) });
@@ -330,6 +378,7 @@
     app.onRemap = null;
     app.editHook = null;
     app.scrollEditorTo = null;
+    app.runEditor = null;
     app.focusEditorLine = null;
     view?.destroy();
   });

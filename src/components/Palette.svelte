@@ -4,13 +4,15 @@
   import { app } from '../lib/app.svelte';
   import { basename, dirname, isMarkdown } from '../lib/fs';
   import { exportMd, exportHtml, exportPdf, exportZip, importPicker } from '../lib/transfer';
+  import { foldAll, unfoldAll } from '@codemirror/language';
 
   type Item = { id: string; label: string; detail?: string; kbd?: string; run: () => void; score: number; marks: number[] };
 
   let input = $state<HTMLInputElement>();
   let index = $state(0);
   let list = $state<HTMLElement>();
-  const mod = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+';
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+  const mod = mac ? '⌘' : 'Ctrl+';
 
   /** Subsequence fuzzy match: consecutive runs and word starts score higher. null = no match. */
   function fuzzy(q: string, text: string): { score: number; marks: number[] } | null {
@@ -49,6 +51,12 @@
             { id: 'export-md', label: 'Export as Markdown', run: () => exportMd(a) },
             { id: 'export-html', label: 'Export as HTML', run: () => exportHtml(a) },
             { id: 'export-pdf', label: 'Export as PDF', run: () => exportPdf(a) },
+            ...(app.mode !== 'preview'
+              ? [
+                  { id: 'fold-all', label: 'Fold all', kbd: mac ? '⌃⌥[' : 'Ctrl+Alt+[', run: () => app.runEditor?.(foldAll) },
+                  { id: 'unfold-all', label: 'Unfold all', kbd: mac ? '⌃⌥]' : 'Ctrl+Alt+]', run: () => app.runEditor?.(unfoldAll) },
+                ]
+              : []),
             { id: 'rename', label: 'Rename current file', run: () => (showView('files'), (app.renaming = a)) },
             { id: 'close', label: 'Close tab', run: () => app.close(a) },
             { id: 'delete', label: 'Move current file to trash', run: () => app.remove([a]) },
