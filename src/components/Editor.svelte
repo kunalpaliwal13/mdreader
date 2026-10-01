@@ -3,6 +3,7 @@
   import { EditorState, EditorSelection, Compartment, type Extension } from '@codemirror/state';
   import { EditorView, keymap, drawSelection, dropCursor, highlightActiveLine, placeholder, rectangularSelection, crosshairCursor, type Command } from '@codemirror/view';
   import { smartTyping } from '../lib/editor/smart';
+  import { slashComplete } from '../lib/editor/slash';
   import { isRichHtml, htmlToMarkdown } from '../lib/editor/htmlPaste';
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
   import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBackward } from '@codemirror/lang-markdown';
@@ -199,15 +200,21 @@
     '.cm-searchMatch-selected': { backgroundColor: 'color-mix(in srgb, #f97316 45%, transparent)' },
     '.cm-matchingBracket': { backgroundColor: 'var(--bg-active)', outline: 'none' },
     '.cm-tooltip': { border: '1px solid var(--border)', backgroundColor: 'var(--bg-elevated)', borderRadius: '8px', boxShadow: 'var(--shadow)', overflow: 'hidden' },
-    '.cm-tooltip-autocomplete > ul': { fontFamily: 'var(--font)', fontSize: '13px', maxHeight: '240px' },
-    '.cm-tooltip-autocomplete > ul > li': { padding: '4px 10px !important' },
-    '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: 'var(--accent-soft)', color: 'var(--text)' },
-    '.cm-completionDetail': { color: 'var(--text-faint)', fontStyle: 'normal', marginLeft: '8px' },
+    '.cm-tooltip.cm-tooltip-autocomplete > ul': { fontFamily: 'var(--font)', fontSize: '13px', maxHeight: '300px', padding: '4px' },
+    '.cm-tooltip.cm-tooltip-autocomplete > ul > li': { display: 'flex', alignItems: 'baseline', gap: '16px', padding: '5px 10px', borderRadius: '6px', lineHeight: '1.3' },
+    '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: 'var(--accent-soft)', color: 'var(--text)' },
+    '.cm-tooltip.cm-tooltip-autocomplete > ul > completion-section': {
+      fontSize: '10.5px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--text-faint)',
+      padding: '8px 10px 3px', borderBottom: '0', opacity: '1',
+    },
+    '.cm-completionDetail': { color: 'var(--text-faint)', fontStyle: 'normal', marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: '11px' },
+    '.cm-completionMatchedText': { textDecoration: 'none', color: 'var(--accent)', fontWeight: '600' },
+    '.cm-tooltip-autocomplete': { minWidth: '240px' },
   });
 
   // everything the Plain toggle turns off
   const smartC = new Compartment();
-  const smart = (): Extension[] => (app.settings.plain ? [] : smartTyping([autocompletion({ override: [wikiComplete], icons: false })]));
+  const smart = (): Extension[] => (app.settings.plain ? [] : smartTyping([autocompletion({ override: [wikiComplete, slashComplete], icons: false })]));
 
   const extensions: Extension[] = [
     history(),

@@ -134,3 +134,29 @@ test('paste: rich HTML becomes markdown, code-editor HTML and ⌘⇧V stay plain
   await pasteHtml(page, '<h1>Big</h1>', 'Big');
   await expect.poll(() => doc(page)).toBe('Big');
 });
+
+test('slash menu inserts blocks; Plain disables it', async ({ page }) => {
+  await ready(page);
+  await newDoc(page, 'slash');
+  await page.keyboard.type('/tab');
+  await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('Table');
+  await page.waitForTimeout(150);
+  await page.keyboard.press('Enter');
+  expect(await doc(page)).toContain('| Column | Column | Column |');
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('/warn');
+  await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('Warning callout');
+  await page.waitForTimeout(150);
+  await page.keyboard.press('Enter');
+  expect(await doc(page)).toBe('> [!WARNING]\n> ');
+  // a slash inside prose or a path doesn't open it
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('and/or');
+  await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
+  // Plain: "/" is just a character
+  await page.keyboard.press('ControlOrMeta+Shift+e');
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('/h');
+  await page.waitForTimeout(200);
+  await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
+});
