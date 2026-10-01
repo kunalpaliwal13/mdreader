@@ -312,3 +312,16 @@ test('front matter sets a note its own preview style and font (preview, settings
   await expect(preview(page)).toHaveClass(/preset-github/);
   await expect(preview(page)).not.toHaveClass(/font-mono/);
 });
+
+test('custom CSS styles the preview and survives a reload', async ({ page }) => {
+  await ready(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const add = page.getByRole('button', { name: 'Add', exact: true });
+  await expect(add).toBeVisible();
+  await add.click();
+  await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeVisible();
+  await page.getByLabel('Custom CSS').fill('.md h1 { color: rgb(255, 0, 0); }');
+  await expect(preview(page).locator('h1').first()).toHaveCSS('color', 'rgb(255, 0, 0)');
+  await page.reload();
+  await expect(preview(page).locator('h1').first()).toHaveCSS('color', 'rgb(255, 0, 0)');
+});

@@ -23,6 +23,7 @@
   const step = <T,>(list: T[], cur: T, d: number) => list[(list.indexOf(cur) + d + list.length) % list.length];
 
   let schemesOpen = $state(false);
+  let cssOpen = $state(false);
   const mode = $derived(app.dark ? 'dark' : 'light');
   const current = $derived(SCHEMES.find((x) => x.id === s.scheme) ?? SCHEMES[0]);
 
@@ -92,6 +93,22 @@
     <input type="range" min="480" max="1400" step="20" value={width} aria-label="Line width" oninput={(e) => setWidth(+(e.currentTarget as HTMLInputElement).value)} />
     <output>{width}</output>
   </div>
+
+  <div class="row">
+    <span class="label">Custom CSS</span>
+    <button class="link" aria-expanded={cssOpen} onclick={() => (cssOpen = !cssOpen)}>{cssOpen ? 'Done' : s.customCss.trim() ? 'Edit' : 'Add'}</button>
+  </div>
+  {#if cssOpen}
+    <textarea
+      class="css"
+      aria-label="Custom CSS"
+      spellcheck="false"
+      placeholder={'.md h1 { color: tomato; }\n.md blockquote { font-style: normal; }'}
+      value={s.customCss}
+      oninput={(e) => set('customCss', (e.currentTarget as HTMLTextAreaElement).value)}
+    ></textarea>
+    <p class="hint">Styles the preview and exports. Target <code>.md</code> elements.</p>
+  {/if}
 
   <div class="group">Editor</div>
 
@@ -206,5 +223,13 @@
   .scheme :global(svg) { margin-left: auto; color: var(--accent); }
   .scheme-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .hint.own { margin: -4px 0 8px; }
+  .link { border: 0; background: none; padding: 0 2px; color: var(--accent); font-size: 12px; cursor: pointer; }
+  .css {
+    display: block; width: 100%; height: 120px; margin: -2px 0 4px; padding: 8px; resize: vertical; box-sizing: border-box;
+    border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text);
+    font: 11.5px/1.5 var(--mono); outline: 0;
+  }
+  .css:focus { border-color: var(--accent); }
+  .hint code { font-family: var(--mono); font-size: 10.5px; }
   .hint { margin: 2px 0 0; font-size: 11px; color: var(--text-faint); line-height: 1.5; }
 </style>

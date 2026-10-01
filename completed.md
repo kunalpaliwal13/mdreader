@@ -80,5 +80,5 @@
       for the tab, with a notice and a "Private window — not kept" status chip
 - [ ] Open a real folder on disk (Chromium)
 - [x] Per-note look via front matter: `preset: sepia`, `font: serif` (preview + exports; Settings says when a note overrides)
-- [ ] Custom CSS
+- [x] Custom CSS (Appearance → Custom CSS): styles the preview and exports
 - [ ] Version history per file

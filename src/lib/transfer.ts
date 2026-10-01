@@ -146,6 +146,7 @@ async function standaloneHtml(path: string, forPrint: boolean): Promise<string> 
 html,body{margin:0;background:#fff}
 ${previewCss}
 ${forPrint ? '@page{margin:18mm 16mm}' : ''}
+${s.customCss.replace(/<\/style/gi, '<\\/style')}
 </style>
 </head>
 <body>

@@ -129,6 +129,12 @@
   };
 </script>
 
+<svelte:head>
+  <!-- Settings → Custom CSS (the preview and exports use it) -->
+  {@html `<style id="mdr-custom-css">${app.settings.customCss.replace(/<\/style/gi, '<\\/style')}</style>`}
+</svelte:head>
+
+
 <svelte:window
   onkeydown={onKey}
   ondragenter={windowDrag.dragenter}
