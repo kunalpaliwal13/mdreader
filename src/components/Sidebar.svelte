@@ -171,7 +171,10 @@
       app.selected.clear();
       app.selected.add(r.path);
       app.anchor = r.path;
-      document.querySelector(`.row[data-path="${CSS.escape(r.path)}"]`)?.scrollIntoView({ block: 'nearest' });
+      // focus follows the selection (roving focus), so the next arrow key always lands on the tree
+      const el = document.querySelector<HTMLElement>(`.row[data-path="${CSS.escape(r.path)}"]`);
+      el?.scrollIntoView({ block: 'nearest' });
+      el?.focus({ preventScroll: true });
     };
     const node = rows[cur];
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {

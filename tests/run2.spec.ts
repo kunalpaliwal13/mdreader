@@ -100,6 +100,7 @@ test('tree keyboard navigation', async ({ page }) => {
   await page.getByRole('button', { name: 'New folder' }).click();
   await page.locator('.row input.rename').fill('alpha');
   await page.locator('.row input.rename').press('Enter');
+  await expect(row(page, 'alpha')).toHaveCount(1);
   await row(page, 'Welcome.md').click();
   await page.keyboard.press('ArrowUp');
   await expect(row(page, 'alpha')).toHaveClass(/selected/);
