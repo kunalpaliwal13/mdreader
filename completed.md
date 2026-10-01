@@ -56,7 +56,7 @@
       table); toolbar above the table for alignment, rows and columns (insert, move, delete), Format table
 - [ ] Live Preview editor
 
-## Run 4 — linking, search, workflow (in progress, 2026-10-01)
+## Run 4 — linking, search, workflow (2026-10-01)
 
 - [x] Search like ripgrep: match case / whole word / regex toggles (`Alt+C` / `Alt+W` / `Alt+R`), every match
       highlighted, one line of context on demand, file and folder names matched too, include / exclude globs
