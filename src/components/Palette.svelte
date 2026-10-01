@@ -187,5 +187,11 @@
   .foot { display: flex; gap: 12px; padding: 7px 12px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-faint); }
   .spacer { flex: 1; }
   kbd { font-family: var(--mono); font-size: 10px; padding: 0 4px; margin-right: 2px; border: 1px solid var(--border); border-radius: 3px; background: var(--bg); }
-  @media (max-width: 760px) { .palette { top: 8px; max-height: 70vh; } .foot { display: none; } }
+  @media (max-width: 760px) {
+    .palette { top: calc(8px + env(safe-area-inset-top)); max-height: 70dvh; border-radius: 14px; }
+    .head { height: 54px; }
+    .head input { font-size: 16px; }
+    .item { height: 46px; font-size: 15px; }
+    .foot { display: none; }
+  }
 </style>

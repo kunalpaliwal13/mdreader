@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X, PanelLeft, PenLine, Columns2, Eye, Download, FileText, FileCode, Printer, Sun, Moon, Pilcrow } from '@lucide/svelte';
+  import { X, PanelLeft, PenLine, Columns2, Eye, Download, FileText, FileCode, Printer, Sun, Moon, Pilcrow, Menu, ChevronDown, Plus } from '@lucide/svelte';
   import { app } from '../lib/app.svelte';
   import { openMenu } from '../lib/menu.svelte';
   import { basename, dirname } from '../lib/fs';
@@ -30,6 +30,17 @@
   }
 </script>
 
+{#if app.narrow}
+  <div class="bar mobile">
+    <button class="icon-btn" aria-label="Files" onclick={() => app.showSidebarView('files')}><Menu size={20} /></button>
+    <button class="title" aria-label="Switch file" onclick={() => app.openPalette('')}>
+      <span class="dot {app.saveState}"></span>
+      <span class="t">{app.active ? basename(app.active).replace(/\.md$/i, '') : 'mdreader'}</span>
+      <ChevronDown size={14} />
+    </button>
+    <button class="icon-btn" aria-label="New file" onclick={() => app.createFile(app.active ? dirname(app.active) : '')}><Plus size={20} /></button>
+  </div>
+{:else}
 <div class="bar">
   {#if !app.settings.sidebar}
     <button class="icon-btn side" title="Show sidebar (⌘\)" aria-label="Show sidebar" onclick={() => ((app.settings.sidebar = true), app.saveSettings())}>
@@ -101,6 +112,7 @@
     {/if}
   </div>
 </div>
+{/if}
 
 <style>
   .bar {
@@ -150,6 +162,18 @@
   .pill.on { background: var(--text); border-color: var(--text); color: var(--bg); }
   .pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .sep { width: 1px; height: 18px; margin: 0 4px; background: var(--border); }
+  .mobile { align-items: center; justify-content: space-between; height: 52px; padding: 0 6px; padding-top: env(safe-area-inset-top); }
+  .mobile .icon-btn { width: 44px; height: 44px; }
+  .title {
+    display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 70%; height: 40px; padding: 0 12px;
+    border: 0; border-radius: 10px; background: none; color: var(--text); font-weight: 600; font-size: 15px; cursor: pointer;
+  }
+  .title:active { background: var(--bg-hover); }
+  .title .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .title :global(svg) { flex: none; color: var(--text-faint); }
+  .dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+  .dot.unsaved, .dot.saving { background: #f59e0b; }
+  .dot.error { background: var(--danger); }
   @media (max-width: 760px) {
     .tab { max-width: 150px; padding-left: 10px; }
     .dir { display: none; }

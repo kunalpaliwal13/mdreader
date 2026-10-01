@@ -14,7 +14,6 @@
   import { dirname } from '../lib/fs';
   import { importPicker, importDrop, hasFiles, exportZip, exportMd } from '../lib/transfer';
 
-  let panel = $state<'trash' | 'settings' | null>(null);
   let dropTarget = $state<string | null>(null);
   let dragging: string[] = [];
 
@@ -247,16 +246,18 @@
   {/if}
 
   <footer>
-    <button class="foot-btn" class:active={panel === 'trash'} onclick={() => { panel = panel === 'trash' ? null : 'trash'; app.refreshTrash(); }}>
+    <button class="foot-btn" class:active={app.panel === 'trash'} onclick={() => { app.panel = app.panel === 'trash' ? null : 'trash'; app.refreshTrash(); }}>
       <Trash size={14} /> Trash {#if app.trash.length}<span class="count">{app.trash.length}</span>{/if}
     </button>
-    <button class="icon-btn" class:active={panel === 'settings'} title="Settings" aria-label="Settings" onclick={() => (panel = panel === 'settings' ? null : 'settings')}>
+    <button class="icon-btn" class:active={app.panel === 'settings'} title="Settings" aria-label="Settings" onclick={() => (app.panel = app.panel === 'settings' ? null : 'settings')}>
       <SettingsIcon size={15} />
     </button>
   </footer>
 
-  {#if panel === 'trash'}<TrashPanel onclose={() => (panel = null)} />{/if}
-  {#if panel === 'settings'}<SettingsPanel onclose={() => (panel = null)} />{/if}
+  {#if !app.narrow}
+    {#if app.panel === 'trash'}<TrashPanel onclose={() => (app.panel = null)} />{/if}
+    {#if app.panel === 'settings'}<SettingsPanel onclose={() => (app.panel = null)} />{/if}
+  {/if}
 </aside>
 
 <style>
@@ -298,4 +299,10 @@
   }
   .foot-btn:hover, .foot-btn.active { background: var(--bg-hover); color: var(--text); }
   .count { font-size: 11px; padding: 0 5px; border-radius: 8px; background: var(--bg-active); color: var(--text-muted); }
+  @media (max-width: 760px) {
+    footer { display: none; } /* Trash + Appearance live in the bottom bar's More sheet */
+    header { height: 52px; }
+    .views button { height: 32px; font-size: 13px; }
+    .filter { height: 38px; }
+  }
 </style>

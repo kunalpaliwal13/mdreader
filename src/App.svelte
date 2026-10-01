@@ -8,6 +8,9 @@
   import EmptyState from './components/EmptyState.svelte';
   import Menu from './components/Menu.svelte';
   import Palette from './components/Palette.svelte';
+  import MobileBar from './components/MobileBar.svelte';
+  import TrashPanel from './components/TrashPanel.svelte';
+  import SettingsPanel from './components/SettingsPanel.svelte';
   import { app } from './lib/app.svelte';
   import { importDrop, hasFiles } from './lib/transfer';
 
@@ -159,7 +162,7 @@
         <EmptyState />
       {/if}
     </div>
-    <StatusBar />
+    {#if app.narrow}<MobileBar />{:else}<StatusBar />{/if}
   </main>
 </div>
 
@@ -167,6 +170,11 @@
 
 {#if app.toast}
   <div class="toast {app.toast.kind}" role="status">{app.toast.msg}</div>
+{/if}
+
+{#if app.narrow}
+  {#if app.panel === 'trash'}<TrashPanel onclose={() => (app.panel = null)} />{/if}
+  {#if app.panel === 'settings'}<SettingsPanel onclose={() => (app.panel = null)} />{/if}
 {/if}
 
 <Menu />
@@ -223,8 +231,9 @@
 
   @media (max-width: 760px) {
     .app, .app.no-side { grid-template-columns: minmax(0, 1fr); }
-    .side { position: fixed; inset: 0 auto 0 0; width: min(300px, 85vw); z-index: 30; box-shadow: var(--shadow); }
+    /* drawer stops above the bottom bar so Files / Search / Outline stay switchable */
+    .side { position: fixed; inset: 0 auto calc(61px + env(safe-area-inset-bottom)) 0; height: auto; width: min(320px, 86vw); z-index: 30; box-shadow: var(--shadow); }
     .resize { display: none; }
-    .scrim { display: block; position: fixed; inset: 0; z-index: 29; background: rgb(0 0 0 / .3); }
+    .scrim { display: block; position: fixed; inset: 0 0 calc(61px + env(safe-area-inset-bottom)) 0; z-index: 29; background: rgb(0 0 0 / .3); }
   }
 </style>

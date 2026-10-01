@@ -160,3 +160,34 @@ test('slash menu inserts blocks; Plain disables it', async ({ page }) => {
   await page.waitForTimeout(200);
   await expect(page.locator('.cm-tooltip-autocomplete')).toHaveCount(0);
 });
+
+test('phone: top bar, bottom bar, drawer and sheets', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await ready(page);
+  const bar = page.locator('.mbar');
+  await expect(bar).toBeVisible();
+  await expect(page.locator('.tab')).toHaveCount(0); // tabs live in the file switcher on phones
+  // primary toggle: preview -> edit
+  await bar.getByRole('button', { name: /Edit/ }).click();
+  await expect(page.locator('.editor-pane')).toBeVisible();
+  await bar.getByRole('button', { name: /Preview/ }).click();
+  await expect(page.locator('.editor-pane')).toBeHidden();
+  // Files opens the drawer; picking a file closes it
+  await bar.getByRole('button', { name: /Files/ }).click();
+  await expect(page.locator('.side')).toBeVisible();
+  await page.locator('.row[data-path="Welcome.md"]').click();
+  await expect(page.locator('.side')).toHaveCount(0);
+  // More -> Appearance opens as a bottom sheet; touch targets are big
+  await bar.getByRole('button', { name: 'More' }).click();
+  const item = page.getByRole('menuitem', { name: 'Appearance' });
+  expect((await item.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await item.click();
+  const sheet = page.locator('.panel');
+  await expect(sheet).toBeVisible();
+  const box = (await sheet.boundingBox())!;
+  expect(Math.round(box.x + box.width)).toBe(390);
+  // title opens the file switcher
+  await page.locator('.panel [aria-label=Close]').click();
+  await page.getByRole('button', { name: 'Switch file' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+});

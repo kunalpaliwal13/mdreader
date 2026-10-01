@@ -75,6 +75,8 @@ class App {
   toast = $state<{ msg: string; kind: 'error' | 'info' } | null>(null);
   cursor = $state({ line: 1, col: 1 });
   sidebarView = $state<SidebarView>('files');
+  /** settings / trash panel (sidebar popover on desktop, bottom sheet on phones) */
+  panel = $state<'trash' | 'settings' | null>(null);
   headings = $state<Heading[]>([]);
   palette = $state<{ open: boolean; query: string }>({ open: false, query: '' });
   /** PWA install prompt captured from beforeinstallprompt (Chromium only). */
@@ -171,6 +173,13 @@ class App {
   install() {
     this.installPrompt?.prompt();
     this.installPrompt = null;
+  }
+
+  /** Phones: open the drawer on a sidebar view, or close it when that view is already showing. */
+  showSidebarView(v: SidebarView) {
+    const open = this.settings.sidebar && this.sidebarView === v;
+    this.sidebarView = v;
+    this.settings.sidebar = !open;
   }
 
   openPalette(query = '') {

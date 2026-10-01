@@ -1,6 +1,7 @@
 <script lang="ts">
   import { menu, closeMenu } from '../lib/menu.svelte';
   import { tick } from 'svelte';
+  import { app } from '../lib/app.svelte';
 
   let el = $state<HTMLDivElement>();
   let pos = $state({ x: 0, y: 0 });
@@ -35,8 +36,8 @@
 
 {#if menu.open}
   <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-  <div class="backdrop" onpointerdown={closeMenu} oncontextmenu={(e) => (e.preventDefault(), closeMenu())}></div>
-  <div class="popover" role="menu" bind:this={el} style="left:{pos.x}px;top:{pos.y}px">
+  <div class="backdrop" class:dim={app.narrow} onpointerdown={closeMenu} oncontextmenu={(e) => (e.preventDefault(), closeMenu())}></div>
+  <div class="popover" class:sheet={app.narrow} role="menu" bind:this={el} style={app.narrow ? '' : `left:${pos.x}px;top:${pos.y}px`}>
     {#each menu.items as item, i (i)}
       {#if 'sep' in item}
         <div class="menu-sep"></div>
@@ -63,4 +64,15 @@
 
 <style>
   .backdrop { position: fixed; inset: 0; z-index: 49; }
+  .backdrop.dim { background: rgb(0 0 0 / .3); animation: fade .15s ease-out; }
+  @keyframes fade { from { opacity: 0; } }
+  /* phones: menus become an action sheet in thumb reach */
+  .sheet {
+    left: 0; right: 0; bottom: 0; top: auto; min-width: 0; max-height: 80dvh; overflow-y: auto;
+    padding: 8px 8px calc(10px + env(safe-area-inset-bottom)); border-radius: 16px 16px 0 0; animation: rise .2s ease-out;
+  }
+  .sheet::before { content: ''; display: block; width: 36px; height: 4px; margin: 0 auto 6px; border-radius: 2px; background: var(--border-strong); }
+  .sheet :global(.menu-item) { height: 48px; font-size: 15px; gap: 12px; padding: 0 12px; }
+  .sheet :global(.menu-label) { font-size: 12px; padding: 10px 12px 4px; }
+  @keyframes rise { from { transform: translateY(24px); opacity: 0; } }
 </style>
