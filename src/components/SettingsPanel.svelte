@@ -59,6 +59,10 @@
     {/each}
   </div>
 
+  {#if app.docStyle.preset || app.docStyle.font}
+    <p class="hint own">This note sets its own {[app.docStyle.preset && 'style: ' + app.docStyle.preset, app.docStyle.font && 'font: ' + app.docStyle.font].filter(Boolean).join(', ')} in its front matter.</p>
+  {/if}
+
   <div class="row">
     <span class="label">Font</span>
     <div class="seg">
@@ -201,5 +205,6 @@
   .scheme.on { color: var(--text); background: var(--accent-soft); }
   .scheme :global(svg) { margin-left: auto; color: var(--accent); }
   .scheme-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hint.own { margin: -4px 0 8px; }
   .hint { margin: 2px 0 0; font-size: 11px; color: var(--text-faint); line-height: 1.5; }
 </style>

@@ -297,3 +297,18 @@ test('private window (no OPFS): notes live in memory, with a notice', async ({ b
   await expect(page.locator('.row[data-path="mem.md"]')).toHaveCount(0);
   await ctx.close();
 });
+
+test('front matter sets a note its own preview style and font (preview, settings hint, export)', async ({ page }) => {
+  await ready(page);
+  await create(page, 'file', 'styled');
+  await replaceDoc(page, '---\npreset: sepia\nfont: mono\n---\n# Styled\n');
+  await expect(preview(page)).toHaveClass(/preset-sepia/);
+  await expect(preview(page)).toHaveClass(/font-mono/);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.getByText('This note sets its own style: sepia, font: mono')).toBeVisible();
+  await page.keyboard.press('Escape');
+  // other notes keep the settings
+  await page.locator('.row[data-path="Welcome.md"]').click();
+  await expect(preview(page)).toHaveClass(/preset-github/);
+  await expect(preview(page)).not.toHaveClass(/font-mono/);
+});

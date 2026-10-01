@@ -79,5 +79,6 @@
 - [x] Storage fallback for private windows: no OPFS (Safari / Firefox private browsing) → notes live in memory
       for the tab, with a notice and a "Private window — not kept" status chip
 - [ ] Open a real folder on disk (Chromium)
-- [ ] Custom CSS and per-file theme via front matter
+- [x] Per-note look via front matter: `preset: sepia`, `font: serif` (preview + exports; Settings says when a note overrides)
+- [ ] Custom CSS
 - [ ] Version history per file

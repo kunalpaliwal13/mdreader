@@ -2,7 +2,7 @@
 import { zipSync, unzipSync, strToU8 } from 'fflate';
 import previewCss from '../preview.css?raw';
 import { fs, basename, isMarkdown, type Entry } from './fs';
-import { renderToElement } from './render';
+import { renderToElement, frontMatterStyle, type DocStyle } from './render';
 import { app } from './app.svelte';
 
 type InFile = { path: string; data: ArrayBuffer | string };
@@ -109,15 +109,16 @@ async function toDataUrl(src: string): Promise<string> {
   });
 }
 
-function previewClasses() {
+function previewClasses(own: DocStyle) {
   const s = app.settings;
-  return `md preset-${s.preset}${s.font === 'preset' ? '' : ' font-' + s.font}`;
+  const font = own.font ?? s.font;
+  return `md preset-${own.preset ?? s.preset}${font === 'preset' ? '' : ' font-' + font}`;
 }
 
 /** Self-contained HTML: rendered content + preview CSS; local images inlined. */
 async function standaloneHtml(path: string, forPrint: boolean): Promise<string> {
   // embeds are inlined, so the exported page stands alone
-  const { el, pending } = await renderToElement(await app.readText(path), {
+  const { el, parsed, pending } = await renderToElement(await app.readText(path), {
     docPath: path,
     dark: false,
     forExport: true,
@@ -148,7 +149,7 @@ ${forPrint ? '@page{margin:18mm 16mm}' : ''}
 </style>
 </head>
 <body>
-<article class="${previewClasses()}" style="--pv-size:${s.size}px;--pv-width:${s.width}px">
+<article class="${previewClasses(frontMatterStyle(parsed.front_matter))}" style="--pv-size:${s.size}px;--pv-width:${s.width}px">
 ${el.innerHTML}
 </article>
 </body>

@@ -85,6 +85,7 @@ npm run build && npm test                        # smoke tests against dist/
 | Daily note | Calendar icon in the sidebar header or palette → Open today's daily note (`Daily/YYYY-MM-DD.md`) |
 | Templates | Put notes in `Templates/`; insert with `/` (e.g. `/meeting`) or palette → Insert template; `{{date}}` `{{time}}` `{{title}}` `{{cursor}}` are filled; `Templates/Daily.md` shapes daily notes |
 | Table of contents | Put `[[toc]]` on its own line |
+| Per-note style | Front matter `preset: github\|academic\|minimal\|sepia` and/or `font: sans\|serif\|mono` |
 | Appearance | Gear icon (bottom-left; More → Appearance on phones): preview style, font, size, line width (editor / both / preview), mode, color scheme |
 | Phone | Bottom bar: Files, Search, Edit/Preview, Outline, More (Plain, theme, export, Appearance, Trash); tap the title to switch files |
 

@@ -7,7 +7,8 @@ tags: [markdown, notes, docs]
 # Welcome to mdreader
 
 A minimal, offline markdown workspace. Everything stays in your browser. This page shows every
-syntax the renderer understands — edit it freely, it's just a file.
+syntax the renderer understands — edit it freely, it's just a file. Front matter can give a note its own look:
+`preset: sepia` or `font: serif`.
 
 [[toc]]
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/app.svelte';
-  import { renderToElement } from '../lib/render';
+  import { renderToElement, frontMatterStyle } from '../lib/render';
   import { onMount } from 'svelte';
   import { resolveRel, isMarkdown, dirname } from '../lib/fs';
   import { mdHeadings, headingKey } from '../lib/headings';
@@ -25,6 +25,7 @@
         readNote: (p) => app.readText(p),
       });
       app.headings = parsed.headings;
+      app.docStyle = frontMatterStyle(parsed.front_matter);
       // tasks are clickable, except inside embeds (those lines belong to another note)
       el.querySelectorAll('input[type=checkbox]').forEach((i) => i.closest('.embed') || i.removeAttribute('disabled'));
       article.replaceChildren(...el.childNodes);
@@ -210,10 +211,10 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions, a11y_mouse_events_have_key_events -->
   <article
     bind:this={article}
-    class="md preset-{app.settings.preset}"
-    class:font-sans={app.settings.font === 'sans'}
-    class:font-serif={app.settings.font === 'serif'}
-    class:font-mono={app.settings.font === 'mono'}
+    class="md preset-{app.docStyle.preset ?? app.settings.preset}"
+    class:font-sans={(app.docStyle.font ?? app.settings.font) === 'sans'}
+    class:font-serif={(app.docStyle.font ?? app.settings.font) === 'serif'}
+    class:font-mono={(app.docStyle.font ?? app.settings.font) === 'mono'}
     style="--pv-size:{app.settings.size}px;--pv-width:{app.settings.width}px"
     onclick={onClick}
     onmouseover={onOver}

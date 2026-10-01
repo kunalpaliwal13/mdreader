@@ -151,6 +151,16 @@ export type RenderOpts = {
   chain?: string[];
 };
 
+// ---- per-note look from front matter: `preset: academic`, `font: serif` ----
+const PRESETS = ['github', 'academic', 'minimal', 'sepia'];
+const FONTS = ['sans', 'serif', 'mono'];
+export type DocStyle = { preset?: string; font?: string };
+export function frontMatterStyle(fm: string | null): DocStyle {
+  const get = (k: string) => fm?.match(new RegExp(`^${k}\\s*:\\s*["']?([\\w-]+)`, 'mi'))?.[1]?.toLowerCase() ?? '';
+  const preset = get('preset'), font = get('font');
+  return { preset: PRESETS.includes(preset) ? preset : undefined, font: FONTS.includes(font) ? font : undefined };
+}
+
 // ---- ![[embeds]]: notes, note sections and images (comrak leaves the syntax as text) ----
 const EMBED = /!\[\[([^\]\n]+)\]\]/g;
 const MAX_DEPTH = 3;

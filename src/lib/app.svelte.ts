@@ -3,7 +3,7 @@ import { SvelteSet } from 'svelte/reactivity';
 import { flushSync, tick } from 'svelte';
 import type { EditorState } from '@codemirror/state';
 import { fs, dirname, basename, join, isMarkdown, type Entry, type TrashEntry } from './fs';
-import { invalidateAsset, type Heading } from './render';
+import { invalidateAsset, type Heading, type DocStyle } from './render';
 import welcome from './welcome.md?raw';
 import { tagsOf } from './tags';
 import { templateFiles, fill, localDate, DAILY, TEMPLATES } from './templates';
@@ -91,6 +91,8 @@ class App {
   /** settings / trash panel (sidebar popover on desktop, bottom sheet on phones) */
   panel = $state<'trash' | 'settings' | null>(null);
   headings = $state<Heading[]>([]);
+  /** the open note's own look from its front matter (overrides the preview settings) */
+  docStyle = $state<DocStyle>({});
   palette = $state<{ open: boolean; query: string }>({ open: false, query: '' });
   /** 'memory' in private windows (no OPFS): notes last until the tab closes */
   storage = $state<'opfs' | 'memory'>('opfs');
