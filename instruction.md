@@ -76,6 +76,7 @@ npm run build && npm test                        # smoke tests against dist/
 | Paste | Web pages / Docs / Notion paste as markdown; `⌘/Ctrl+Shift+V` pastes plain text |
 | Multi-cursor, lines | `⌘/Ctrl`-click adds a cursor; `Alt`-drag selects a column; `Alt+↑/↓` moves lines |
 | Fold | Hover a heading, list item, code block or quote and click the chevron; palette → Fold all / Unfold all; click a callout's title in the preview |
+| Tables | Type `\| Name \| Age \|` and Enter; Tab / Shift-Tab / Enter move between cells and align; the toolbar above the table aligns columns and adds, moves or deletes rows and columns |
 | Table of contents | Put `[[toc]]` on its own line |
 | Appearance | Gear icon (bottom-left; More → Appearance on phones): preview style, font, size, line width (editor / both / preview), mode, color scheme |
 | Phone | Bottom bar: Files, Search, Edit/Preview, Outline, More (Plain, theme, export, Appearance, Trash); tap the title to switch files |

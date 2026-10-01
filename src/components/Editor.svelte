@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { EditorState, EditorSelection, Compartment, StateField, StateEffect, RangeSet, type Extension } from '@codemirror/state';
+  import { EditorState, EditorSelection, Compartment, StateField, StateEffect, RangeSet, Prec, type Extension } from '@codemirror/state';
   import {
     EditorView, keymap, drawSelection, dropCursor, highlightActiveLine, placeholder, rectangularSelection, crosshairCursor,
     ViewPlugin, GutterMarker, gutterLineClass, type Command,
   } from '@codemirror/view';
   import { smartTyping } from '../lib/editor/smart';
   import { slashComplete } from '../lib/editor/slash';
+  import { tableKeymap, tableToolbar } from '../lib/editor/table';
   import { isRichHtml, htmlToMarkdown } from '../lib/editor/htmlPaste';
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
   import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBackward } from '@codemirror/lang-markdown';
@@ -246,11 +247,13 @@
     '.cm-completionDetail': { color: 'var(--text-faint)', fontStyle: 'normal', marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: '11px' },
     '.cm-completionMatchedText': { textDecoration: 'none', color: 'var(--accent)', fontWeight: '600' },
     '.cm-tooltip-autocomplete': { minWidth: '240px' },
+    '.cm-tooltip.cm-table-tip': { borderRadius: '7px' },
   });
 
   // everything the Plain toggle turns off
   const smartC = new Compartment();
-  const smart = (): Extension[] => (app.settings.plain ? [] : smartTyping([autocompletion({ override: [wikiComplete, slashComplete], icons: false })]));
+  const smart = (): Extension[] =>
+    app.settings.plain ? [] : smartTyping([autocompletion({ override: [wikiComplete, slashComplete], icons: false }), Prec.high(keymap.of(tableKeymap))]);
 
   const extensions: Extension[] = [
     history(),
@@ -275,6 +278,7 @@
       },
     }),
     foldHover,
+    tableToolbar,
     EditorState.allowMultipleSelections.of(true),
     rectangularSelection(),
     crosshairCursor(),

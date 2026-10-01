@@ -217,3 +217,61 @@ test('folding: headings in the editor, callouts in the preview', async ({ page }
   await page.keyboard.type(' more');
   await expect(preview(page).locator('.markdown-alert')).toHaveClass(/folded/);
 });
+
+test('table editor: header + Enter makes a table, Tab/Enter move and align, empty row exits', async ({ page }) => {
+  await ready(page);
+  await newDoc(page, 'table');
+  await page.keyboard.type('| Name | Age |');
+  await page.keyboard.press('Enter'); // delimiter row + first body row
+  await page.keyboard.type('Ann');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('31');
+  await page.keyboard.press('Enter'); // new row, back in the column the Tab run started in
+  await page.keyboard.type('Bartholomew');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('7');
+  await page.keyboard.press('Shift+Tab'); // re-aligns and selects the previous cell
+  await page.keyboard.type('Bo');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter'); // empty last row: leave the table
+  await page.keyboard.type('after');
+  expect(await doc(page)).toBe(['| Name | Age |', '| ---- | --- |', '| Ann  | 31  |', '| Bo   | 7   |', '', 'after'].join('\n'));
+  await expect(preview(page).locator('table tbody tr')).toHaveCount(2);
+  await expect(preview(page).locator('p', { hasText: 'after' })).toBeVisible();
+
+  // toolbar shows while the cursor is in the table
+  const bar = page.getByRole('toolbar', { name: 'Table' });
+  await expect(bar).toHaveCount(0);
+  await page.keyboard.press('ControlOrMeta+Home'); // header, first column
+  await expect(bar).toBeVisible();
+  await bar.getByRole('button', { name: 'Align right' }).click();
+  await expect(bar.getByRole('button', { name: 'Align right' })).toHaveAttribute('aria-pressed', 'true');
+  await bar.getByRole('button', { name: 'Add column right' }).click();
+  await page.keyboard.type('Id');
+  await page.keyboard.press('Tab'); // to "Age"
+  await bar.getByRole('button', { name: 'More table actions' }).click();
+  await page.getByRole('menuitem', { name: 'Delete column' }).click();
+  expect(await doc(page)).toBe(['| Name | Id  |', '| ---: | --- |', '|  Ann |     |', '|   Bo |     |', '', 'after'].join('\n'));
+  await expect(preview(page).locator('th').first()).toHaveAttribute('align', 'right');
+  await page.keyboard.press('ControlOrMeta+End');
+  await expect(bar).toHaveCount(0);
+});
+
+test('table editor: pasted tables stay as-is, escaped pipes survive, Plain leaves Enter alone', async ({ page }) => {
+  await ready(page);
+  await newDoc(page, 'table2');
+  const raw = '|a|b \\| c|\n|-|-|\n|1|2|';
+  await paste(page, raw);
+  expect(await doc(page)).toBe(raw); // pasting never reformats
+  await page.keyboard.press('Tab'); // last cell: re-align and add a row
+  expect(await doc(page)).toBe(['| a   | b \\| c |', '| --- | ------ |', '| 1   | 2      |', '|     |        |'].join('\n'));
+  await expect(preview(page).locator('th').nth(1)).toHaveText('b | c');
+
+  await page.keyboard.press('ControlOrMeta+Shift+E'); // Plain
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('| x | y |');
+  await page.keyboard.press('Enter');
+  expect((await doc(page)).split('\n').slice(-3)).toEqual(['', '| x | y |', '']);
+});

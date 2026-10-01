@@ -51,7 +51,10 @@
       menus and panels as bottom sheets, larger touch targets
 - [x] Folding: chevron beside headings, list items, code blocks and quotes on hover; Fold all / Unfold all in the
       palette (`Ctrl+Alt+[` / `]`); callouts fold in the preview by clicking their title
-- [ ] Table editor, Live Preview editor
+- [x] Table editor: type `| a | b |` + Enter to start a table; Tab / Shift-Tab / Enter move between cells and
+      re-align columns (Enter returns to the column a Tab run started in; Enter on an empty last row leaves the
+      table); toolbar above the table for alignment, rows and columns (insert, move, delete), Format table
+- [ ] Live Preview editor
 
 ## Later
 

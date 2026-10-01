@@ -5,6 +5,8 @@
   import { basename, dirname, isMarkdown } from '../lib/fs';
   import { exportMd, exportHtml, exportPdf, exportZip, importPicker } from '../lib/transfer';
   import { foldAll, unfoldAll } from '@codemirror/language';
+  import type { Command as EditorCommand } from '@codemirror/view';
+  import { tableCommands } from '../lib/editor/table';
 
   type Item = { id: string; label: string; detail?: string; kbd?: string; run: () => void; score: number; marks: number[] };
 
@@ -33,6 +35,8 @@
     return { score: score - t.length * 0.01, marks };
   }
 
+  const inTable = (cmd: EditorCommand): EditorCommand => (v) => cmd(v) || (app.notify('Put the cursor in a table first'), true);
+
   const commands = $derived.by(() => {
     const a = app.active;
     const cmds: Omit<Item, 'score' | 'marks'>[] = [
@@ -55,6 +59,9 @@
               ? [
                   { id: 'fold-all', label: 'Fold all', kbd: mac ? '⌃⌥[' : 'Ctrl+Alt+[', run: () => app.runEditor?.(foldAll) },
                   { id: 'unfold-all', label: 'Unfold all', kbd: mac ? '⌃⌥]' : 'Ctrl+Alt+]', run: () => app.runEditor?.(unfoldAll) },
+                  { id: 'table-format', label: 'Format table', run: () => app.runEditor?.(inTable(tableCommands.format)) },
+                  { id: 'table-row', label: 'Add table row', run: () => app.runEditor?.(inTable(tableCommands.rowBelow)) },
+                  { id: 'table-col', label: 'Add table column', run: () => app.runEditor?.(inTable(tableCommands.colRight)) },
                 ]
               : []),
             { id: 'rename', label: 'Rename current file', run: () => (showView('files'), (app.renaming = a)) },
