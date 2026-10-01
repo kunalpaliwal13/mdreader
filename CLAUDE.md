@@ -20,6 +20,9 @@ markdown syntax rendered, style the rendering how they like, and export to md / 
   `completed.md` at the end of every run.
 - Every push to `main` deploys to GitHub Pages (`.github/workflows/pages.yml`); layout must work on
   phone, tablet and desktop.
+- Commit every step: one commit per feature, bug fix or chore (conventional prefix: feat/fix/chore/docs/test),
+  as soon as it builds and its tests pass — never batch a whole run into one commit. Push each commit to both
+  remotes (fork `sandptel/mdreader` deploys Pages; upstream `kunalpaliwal13/mdreader`).
 - Work in runs split into chunks; verify each run (kitchen-sink fixture + Playwright smoke on built
   `dist/`, Chromium + WebKit + Firefox) before handing over for user testing.
 - Think like a product manager before placing any control: the document is the product, chrome stays
