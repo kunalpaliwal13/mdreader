@@ -1,4 +1,4 @@
-import { test, expect } from './fixture';
+import { test, expect, editorText } from './fixture';
 import type { Page } from '@playwright/test';
 
 const preview = (page: Page) => page.locator('.preview-pane .md');
@@ -69,8 +69,8 @@ test('outline jumps, wikilinks create + resolve, backlinks, autocomplete', async
   await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('Welcome');
   await page.waitForTimeout(150); // CodeMirror ignores Enter for 75ms after the list opens
   await page.keyboard.press('Enter');
-  await expect(page.locator('.cm-content')).toContainText('See [[Welcome]]');
-  await expect(page.locator('.cm-content')).not.toContainText('[[Welcome]]]]');
+  await expect.poll(() => editorText(page)).toContain('See [[Welcome]]');
+  expect(await editorText(page)).not.toContain('[[Welcome]]]]');
 
   // Welcome now lists the mention
   await expect(page.locator('.status .save')).toHaveText('Saved', { timeout: 5000 });

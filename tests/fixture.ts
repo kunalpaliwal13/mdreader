@@ -28,3 +28,12 @@ export const test = base.extend<{ context: BrowserContext; page: Page }>({
   },
 });
 
+
+/**
+ * The editor's document, from CodeMirror's state rather than the DOM: Live Preview hides markup, so `.cm-line` text
+ * isn't the source. (`cmTile` is CodeMirror's DOM back-reference; the version is pinned by package-lock.)
+ */
+export const editorText = (page: Page) =>
+  page.locator('.cm-content').evaluate((el: HTMLElement & { cmTile?: { view: { state: { doc: { toString(): string } } } } }) =>
+    el.cmTile!.view.state.doc.toString(),
+  );

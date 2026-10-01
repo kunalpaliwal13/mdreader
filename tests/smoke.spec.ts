@@ -1,4 +1,4 @@
-import { test, expect } from './fixture';
+import { test, expect, editorText } from './fixture';
 import type { Page } from '@playwright/test';
 
 const shots = process.env.SHOTS;
@@ -61,7 +61,7 @@ test('file tree CRUD, edit, persist, move, trash, restore', async ({ page }) => 
 
   // toggle task from preview writes back to the source
   await preview(page).locator('input[type=checkbox]').click();
-  await expect(page.locator('.cm-content')).toContainText('[x] task one');
+  await expect.poll(() => editorText(page)).toContain('[x] task one');
 
   // bold shortcut
   await page.locator('.cm-content').click();
@@ -69,7 +69,7 @@ test('file tree CRUD, edit, persist, move, trash, restore', async ({ page }) => 
   await page.keyboard.type('bold');
   await page.keyboard.press('Shift+Home');
   await page.keyboard.press('ControlOrMeta+b');
-  await expect(page.locator('.cm-content')).toContainText('**bold**');
+  await expect.poll(() => editorText(page)).toContain('**bold**');
 
   // persisted across reload
   await expect(page.locator('.status .save')).toHaveText('Saved', { timeout: 5000 });
@@ -209,7 +209,7 @@ test('import files + zip, paste image, export zip, pdf', async ({ page }) => {
     Object.defineProperty(e, 'clipboardData', { value: dt });
     el.dispatchEvent(e);
   });
-  await expect(page.locator('.cm-content')).toContainText('![dot](assets/dot.png)');
+  await expect.poll(() => editorText(page)).toContain('![dot](assets/dot.png)');
   await row(page, 'sub/assets').click();
   await expect(row(page, 'sub/assets/dot.png')).toBeVisible();
   await expect(preview(page).locator('img')).toHaveAttribute('src', /^blob:/);

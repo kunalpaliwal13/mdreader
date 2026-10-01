@@ -1,4 +1,4 @@
-import { test, expect } from './fixture';
+import { test, expect, editorText } from './fixture';
 import type { Page } from '@playwright/test';
 
 const preview = (page: Page) => page.locator('.preview-pane .md');
@@ -36,16 +36,7 @@ const newDoc = async (page: Page, name: string) => {
   await page.locator('.row input.rename').press('Enter');
   await page.locator('.cm-content').click();
 };
-const doc = (page: Page) =>
-  page.locator('.cm-content').evaluate((el) =>
-    [...el.querySelectorAll('.cm-line')]
-      .map((l) => {
-        const c = l.cloneNode(true) as HTMLElement;
-        c.querySelectorAll('.cm-placeholder, .cm-widgetBuffer').forEach((x) => x.remove());
-        return c.textContent;
-      })
-      .join('\n'),
-  );
+const doc = editorText;
 const paste = (page: Page, text: string) =>
   page.locator('.cm-content').evaluate((el, t) => {
     const dt = new DataTransfer();
