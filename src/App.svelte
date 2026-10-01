@@ -70,6 +70,9 @@
     } else if (e.key.toLowerCase() === 's' && !e.shiftKey) {
       e.preventDefault();
       app.flush().then(() => app.active && app.notify('Saved'));
+    } else if (k === 'b' && e.shiftKey && app.active) {
+      e.preventDefault();
+      app.toggleBookmark(app.active);
     } else if (k === 'e' && e.shiftKey && app.active) {
       e.preventDefault();
       app.togglePlain();

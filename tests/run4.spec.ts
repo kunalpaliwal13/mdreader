@@ -197,3 +197,55 @@ test('daily note + templates: calendar icon, Templates/Daily.md, slash menu and 
   await page.getByRole('button', { name: "Today's note" }).click();
   await expect(page.locator('.row[data-path^="Daily/"]')).toHaveCount(1);
 });
+
+test('bookmarks (file + heading), recents first in ⌘P, pinned tabs, reopen closed tab', async ({ page }) => {
+  await ready(page);
+  await create(page, 'file', 'Alpha');
+  await replaceDoc(page, '# Alpha\n\n## Deep section\n\ntext\n');
+  await create(page, 'file', 'Beta');
+
+  // bookmark a file from the tree and a heading from the outline
+  await page.locator('.row[data-path="Alpha.md"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Bookmark', exact: true }).click();
+  await expect(page.locator('.mark')).toHaveCount(1);
+  await page.locator('.row[data-path="Alpha.md"]').click();
+  await page.getByRole('tab', { name: 'Outline' }).click();
+  await page.locator('.heading', { hasText: 'Deep section' }).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Bookmark heading' }).click();
+  await page.getByRole('tab', { name: 'Files' }).click();
+  await expect(page.locator('.mark')).toHaveCount(2);
+
+  // a heading bookmark opens its note at the heading
+  await page.locator('.row[data-path="Beta.md"]').click();
+  await page.locator('.mark', { hasText: 'Deep section' }).click();
+  await expect(page.locator('.tabs .tab.active')).toContainText('Alpha');
+  await expect(page.locator('.status')).toContainText('Ln 3,');
+  await page.keyboard.press('ControlOrMeta+Shift+b'); // un-bookmarks the current file
+  await expect(page.locator('.mark')).toHaveCount(1);
+
+  // ⌘P: recently opened first, the current file last
+  await page.keyboard.press('ControlOrMeta+p');
+  await expect(page.getByRole('option').first()).toContainText('Beta');
+  await page.keyboard.press('Escape');
+
+  // pin Beta: it moves first, shows a pin instead of ×, and won't close by accident
+  const names = page.locator('.tabs .tab .name');
+  await page.locator('.tabs .tab', { hasText: 'Beta' }).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Pin tab' }).click();
+  await expect(names).toHaveText(['Beta', 'Welcome', 'Alpha']);
+  await page.locator('.tabs .tab', { hasText: 'Beta' }).click({ button: 'middle' });
+  await expect(names).toHaveCount(3);
+
+  // close a tab, reopen it from the tab menu
+  await page.locator('.tabs .tab', { hasText: 'Welcome' }).getByRole('button', { name: 'Close tab' }).click();
+  await expect(names).toHaveText(['Beta', 'Alpha']);
+  await page.locator('.tabs .tab', { hasText: 'Alpha' }).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Reopen closed tab' }).click();
+  await expect(names).toHaveText(['Beta', 'Alpha', 'Welcome']);
+
+  // pins and bookmarks survive a reload
+  await page.reload();
+  await expect(names).toHaveText(['Beta', 'Alpha', 'Welcome']);
+  await expect(page.locator('.tabs .tab', { hasText: 'Beta' }).getByRole('button', { name: 'Unpin tab' })).toHaveCount(1);
+  await expect(page.locator('.mark')).toHaveText([/Deep section/]);
+});

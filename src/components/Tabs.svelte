@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { X, PanelLeft, PenLine, Columns2, Eye, Download, FileText, FileCode, Printer, Sun, Moon, Pilcrow, Menu, ChevronDown, Plus } from '@lucide/svelte';
+  import {
+    X, PanelLeft, PenLine, Columns2, Eye, Download, FileText, FileCode, Printer, Sun, Moon, Pilcrow, Menu, ChevronDown, Plus, Pin, PinOff,
+    Bookmark, BookmarkMinus, RotateCcw, XSquare,
+  } from '@lucide/svelte';
   import { app } from '../lib/app.svelte';
   import { openMenu } from '../lib/menu.svelte';
   import { basename, dirname } from '../lib/fs';
@@ -21,6 +24,18 @@
       { label: 'HTML page (.html)', icon: FileCode, action: () => exportHtml(p) },
       { label: 'PDF…', icon: Printer, action: () => exportPdf(p) },
     ], e.currentTarget as HTMLElement);
+  }
+
+  function tabMenu(e: MouseEvent, t: string) {
+    const pinned = app.pinned.has(t), marked = app.isBookmarked(t);
+    openMenu(e, [
+      { label: pinned ? 'Unpin tab' : 'Pin tab', icon: pinned ? PinOff : Pin, action: () => app.togglePin(t) },
+      { label: marked ? 'Remove bookmark' : 'Bookmark', icon: marked ? BookmarkMinus : Bookmark, action: () => app.toggleBookmark(t) },
+      { sep: true },
+      ...(pinned ? [] : [{ label: 'Close', icon: X, action: () => app.close(t) }]),
+      { label: 'Close others', icon: XSquare, action: () => app.closeOthers(t) },
+      { label: 'Reopen closed tab', icon: RotateCcw, action: () => app.reopenClosed() },
+    ]);
   }
 
   function wheel(e: WheelEvent) {
@@ -59,11 +74,18 @@
         title={t}
         onclick={() => app.open(t)}
         onkeydown={(e) => e.key === 'Enter' && app.open(t)}
+        onmousedown={(e) => e.button === 1 && e.preventDefault() /* no Firefox autoscroll eating the next click */}
         onauxclick={(e) => e.button === 1 && app.close(t)}
+        oncontextmenu={(e) => tabMenu(e, t)}
+        class:pinned={app.pinned.has(t)}
       >
         <span class="name">{basename(t).replace(/\.md$/i, '')}</span>
         {#if (dupes.get(basename(t)) ?? 0) > 1 && dirname(t)}<span class="dir">{dirname(t)}</span>{/if}
-        <button class="close" aria-label="Close tab" onclick={(e) => (e.stopPropagation(), app.close(t))}><X size={12} /></button>
+        {#if app.pinned.has(t)}
+          <button class="close pin" aria-label="Unpin tab" title="Pinned — click to unpin" onclick={(e) => (e.stopPropagation(), app.togglePin(t))}><Pin size={11} /></button>
+        {:else}
+          <button class="close" aria-label="Close tab" onclick={(e) => (e.stopPropagation(), app.close(t))}><X size={12} /></button>
+        {/if}
       </div>
     {/each}
   </div>
@@ -152,6 +174,7 @@
   }
   .tab:hover .close, .tab.active .close { opacity: 1; }
   .close:hover { background: var(--bg-active); color: var(--text); }
+  .close.pin { opacity: 1; color: var(--text-faint); }
   .right { display: flex; align-items: center; gap: 6px; padding: 0 10px; flex: none; }
   .pill {
     display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px 0 10px; margin: 0 2px;

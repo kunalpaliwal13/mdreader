@@ -44,6 +44,7 @@
       { id: 'new-file', label: 'New file', run: () => app.createFile(a ? dirname(a) : '') },
       { id: 'new-folder', label: 'New folder', run: () => app.createFolder(a ? dirname(a) : '') },
       { id: 'daily', label: "Open today's daily note", run: () => app.openDaily() },
+      { id: 'reopen', label: 'Reopen closed tab', run: () => app.reopenClosed() },
       { id: 'preview', label: app.mode === 'preview' ? 'Back to editing' : 'Toggle preview', kbd: `${mod}E`, run: () => app.togglePreview() },
       ...(!app.narrow ? [{ id: 'split', label: 'Toggle split view', run: () => app.toggleSplit() }] : []),
       { id: 'plain', label: app.settings.plain ? 'Restore smart typing' : 'Plain editor (pause smart typing)', kbd: `${mod}⇧E`, run: () => app.togglePlain() },
@@ -70,6 +71,8 @@
               ? templateFiles(app.entries).map((p) => ({ id: 'tpl:' + p, label: 'Insert template: ' + basename(p).replace(/\.(md|markdown|mdx|txt)$/i, ''), run: () => app.insertTemplate(p) }))
               : []),
             { id: 'rename', label: 'Rename current file', run: () => (showView('files'), (app.renaming = a)) },
+            { id: 'bookmark', label: app.isBookmarked(a) ? 'Remove bookmark' : 'Bookmark current file', kbd: `${mod}⇧B`, run: () => app.toggleBookmark(a) },
+            { id: 'pin', label: app.pinned.has(a) ? 'Unpin tab' : 'Pin tab', run: () => app.togglePin(a) },
             { id: 'close', label: 'Close tab', run: () => app.close(a) },
             { id: 'delete', label: 'Move current file to trash', run: () => app.remove([a]) },
           ]
@@ -104,9 +107,10 @@
       const m = fuzzy(q, s.label) ?? (s.match !== s.label ? fuzzy(q, s.match) : null);
       if (m) out.push({ ...s, score: m.score + (fuzzy(q, s.label) ? 10 : 0), marks: fuzzy(q, s.label)?.marks ?? [] });
     }
-    // recent tabs float to the top of the empty file list
-    if (!q && !isCommand) out.sort((x, y) => (app.tabs.includes(y.id) ? 1 : 0) - (app.tabs.includes(x.id) ? 1 : 0));
-    else if (q) out.sort((x, y) => y.score - x.score);
+    // recently opened files first (the one you're in last); with a query, recency breaks ties
+    const age = (id: string) => (id === app.active ? 98 : app.recent.indexOf(id) < 0 ? 99 : app.recent.indexOf(id));
+    if (!q && !isCommand) out.sort((x, y) => age(x.id) - age(y.id));
+    else if (q) out.sort((x, y) => y.score - x.score || (isCommand ? 0 : age(x.id) - age(y.id)));
     return out.slice(0, 60);
   });
 

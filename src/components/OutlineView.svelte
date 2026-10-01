@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Link2 } from '@lucide/svelte';
+  import { Link2, Bookmark, BookmarkMinus } from '@lucide/svelte';
+  import { openMenu } from '../lib/menu.svelte';
   import { app } from '../lib/app.svelte';
   import { basename, dirname, resolveRel } from '../lib/fs';
 
@@ -45,6 +46,10 @@
         class:current={h.line === current}
         style="padding-left:{10 + (h.level - min) * 12}px"
         onclick={() => app.revealLine(h.line)}
+        oncontextmenu={(e) => {
+          const p = app.active!, on = app.isBookmarked(p, h.text);
+          openMenu(e, [{ label: on ? 'Remove bookmark' : 'Bookmark heading', icon: on ? BookmarkMinus : Bookmark, action: () => app.toggleBookmark(p, h.text) }]);
+        }}
       >{h.text}</button>
     {:else}
       <p class="empty">No headings yet. Lines starting with <code>#</code> appear here.</p>

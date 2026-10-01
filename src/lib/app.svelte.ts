@@ -59,6 +59,8 @@ function persist(key: string, v: unknown) {
   } catch {}
 }
 
+export type Bookmark = { path: string; heading?: string };
+
 /** Editor states per open file (undo history, selection). Not reactive on purpose. */
 export const editorStates = new Map<string, EditorState>();
 
@@ -69,6 +71,13 @@ class App {
   selected = new SvelteSet<string>();
   anchor: string | null = null;
   tabs = $state<string[]>([]);
+  /** pinned tabs sit first and can't be closed by accident */
+  pinned = new SvelteSet<string>();
+  /** files (or a heading in one) kept at the top of the Files view */
+  bookmarks = $state<Bookmark[]>(load<{ v: Bookmark[] }>('mdr.bookmarks', { v: [] }).v);
+  /** most recently opened first (⌘P shows these first) */
+  recent = $state<string[]>(load<{ v: string[] }>('mdr.recent', { v: [] }).v);
+  private closedTabs: string[] = [];
   active = $state<string | null>(null);
   texts = $state<Record<string, string>>({});
   saveState = $state<'saved' | 'saving' | 'unsaved' | 'error'>('saved');
@@ -298,16 +307,45 @@ class App {
       persist('mdr.seeded', { v: true });
       await this.refresh();
     }
-    const session = load<{ tabs: string[]; active: string | null }>('mdr.session', { tabs: [], active: null });
+    const session = load<{ tabs: string[]; active: string | null; pinned: string[] }>('mdr.session', { tabs: [], active: null, pinned: [] });
     const files = new Set(this.entries.filter((e) => e.kind === 'file').map((e) => e.path));
     for (const t of session.tabs) if (files.has(t)) await this.open(t, false);
+    for (const t of session.pinned) if (this.tabs.includes(t)) this.pinned.add(t);
     if (session.active && files.has(session.active)) await this.open(session.active);
     else if (!this.tabs.length && files.has('Welcome.md')) await this.open('Welcome.md');
     await this.refreshTrash();
   }
 
   private saveSession() {
-    persist('mdr.session', { tabs: this.tabs, active: this.active });
+    persist('mdr.session', { tabs: this.tabs, active: this.active, pinned: [...this.pinned] });
+  }
+
+  isBookmarked(path: string, heading = '') {
+    return this.bookmarks.some((b) => b.path === path && (b.heading ?? '') === heading);
+  }
+  toggleBookmark(path: string, heading = '') {
+    const i = this.bookmarks.findIndex((b) => b.path === path && (b.heading ?? '') === heading);
+    if (i >= 0) this.bookmarks.splice(i, 1);
+    else this.bookmarks.push(heading ? { path, heading } : { path });
+    persist('mdr.bookmarks', { v: this.bookmarks });
+    this.notify(i >= 0 ? 'Bookmark removed' : 'Bookmarked');
+  }
+
+  togglePin(path: string) {
+    if (this.pinned.has(path)) this.pinned.delete(path);
+    else this.pinned.add(path);
+    this.tabs = [...this.tabs.filter((t) => this.pinned.has(t)), ...this.tabs.filter((t) => !this.pinned.has(t))];
+    this.saveSession();
+  }
+
+  async reopenClosed() {
+    for (let p = this.closedTabs.pop(); p; p = this.closedTabs.pop())
+      if (this.entries.some((e) => e.path === p)) return this.open(p);
+    this.notify('No closed tabs to reopen');
+  }
+
+  closeOthers(keep: string) {
+    for (const t of [...this.tabs]) if (t !== keep && !this.pinned.has(t)) this.close(t);
   }
 
   async open(path: string, focus = true) {
@@ -323,6 +361,8 @@ class App {
     if (focus) {
       if (this.active && this.active !== path) await this.flush(this.active);
       this.active = path;
+      this.recent = [path, ...this.recent.filter((p) => p !== path)].slice(0, 30);
+      persist('mdr.recent', { v: this.recent });
       // the tree highlights one thing: the open file (multi-select is its own gesture)
       if (this.selected.size <= 1) {
         this.selected.clear();
@@ -337,9 +377,11 @@ class App {
   }
 
   async close(path: string) {
+    if (this.pinned.has(path)) return this.notify('Pinned tab — unpin it to close');
     await this.flush(path);
     const i = this.tabs.indexOf(path);
     if (i < 0) return;
+    this.closedTabs = [...this.closedTabs.filter((p) => p !== path), path].slice(-20);
     this.tabs.splice(i, 1);
     delete this.texts[path];
     editorStates.delete(path);
@@ -398,7 +440,12 @@ class App {
         editorStates.set(n, s);
       }
     }
-    for (const set of [this.expanded, this.selected]) {
+    this.bookmarks = this.bookmarks.map((b) => ({ ...b, path: map(b.path) }));
+    this.recent = this.recent.map(map);
+    this.closedTabs = this.closedTabs.map(map);
+    persist('mdr.bookmarks', { v: this.bookmarks });
+    persist('mdr.recent', { v: this.recent });
+    for (const set of [this.expanded, this.selected, this.pinned]) {
       for (const k of [...set]) {
         const n = map(k);
         if (n !== k) {
@@ -419,6 +466,7 @@ class App {
         this.timers.delete(t);
         const i = this.tabs.indexOf(t);
         this.tabs.splice(i, 1);
+        this.pinned.delete(t);
         delete this.texts[t];
         editorStates.delete(t);
         if (this.active === t) this.active = this.tabs[Math.min(i, this.tabs.length - 1)] ?? null;

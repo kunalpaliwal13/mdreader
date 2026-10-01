@@ -79,6 +79,8 @@ npm run build && npm test                        # smoke tests against dist/
 | Multi-cursor, lines | `⌘/Ctrl`-click adds a cursor; `Alt`-drag selects a column; `Alt+↑/↓` moves lines |
 | Fold | Hover a heading, list item, code block or quote and click the chevron; palette → Fold all / Unfold all; click a callout's title in the preview |
 | Tables | Type `\| Name \| Age \|` and Enter; Tab / Shift-Tab / Enter move between cells and align; the toolbar above the table aligns columns and adds, moves or deletes rows and columns |
+| Bookmarks | Right-click a file, tab or outline heading → Bookmark (or `⌘/Ctrl+Shift+B`); they list at the top of Files |
+| Tabs | Right-click a tab: Pin, Bookmark, Close, Close others, Reopen closed tab; middle-click closes; `⌘P` shows recent files first |
 | Daily note | Calendar icon in the sidebar header or palette → Open today's daily note (`Daily/YYYY-MM-DD.md`) |
 | Templates | Put notes in `Templates/`; insert with `/` (e.g. `/meeting`) or palette → Insert template; `{{date}}` `{{time}}` `{{title}}` `{{cursor}}` are filled; `Templates/Daily.md` shapes daily notes |
 | Table of contents | Put `[[toc]]` on its own line |

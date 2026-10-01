@@ -2,8 +2,11 @@
   import {
     FilePlus, FolderPlus, Import, Search, Trash, Settings as SettingsIcon, PanelLeftClose, X,
     Pencil, Copy, FileDown, Archive, FileText, FolderUp, FileArchive, FolderTree, TextSearch, ListTree, CalendarDays,
+    Bookmark, BookmarkMinus, Hash, ChevronRight, Folder,
   } from '@lucide/svelte';
   import TreeNode, { type TreeCtx } from './TreeNode.svelte';
+  import type { Bookmark as BookmarkT } from '../lib/app.svelte';
+  import { mdHeadings, headingKey } from '../lib/headings';
   import TrashPanel from './TrashPanel.svelte';
   import SearchView from './SearchView.svelte';
   import OutlineView from './OutlineView.svelte';
@@ -11,7 +14,7 @@
   import { app } from '../lib/app.svelte';
   import { openMenu, type MenuItem } from '../lib/menu.svelte';
   import { buildTree, visibleRows, type TreeNode as Node } from '../lib/tree';
-  import { dirname } from '../lib/fs';
+  import { dirname, basename } from '../lib/fs';
   import { importPicker, importDrop, hasFiles, exportZip, exportMd } from '../lib/transfer';
 
   let dropTarget = $state<string | null>(null);
@@ -85,6 +88,9 @@
       { label: 'New file', icon: FilePlus, action: () => app.createFile(dir) },
       { label: 'New folder', icon: FolderPlus, action: () => app.createFolder(dir) },
       { sep: true },
+      app.isBookmarked(n.path)
+        ? { label: 'Remove bookmark', icon: BookmarkMinus, action: () => app.toggleBookmark(n.path) }
+        : { label: 'Bookmark', icon: Bookmark, action: () => app.toggleBookmark(n.path) },
       { label: 'Rename', icon: Pencil, action: () => (app.renaming = n.path), kbd: 'F2' },
       { label: 'Duplicate', icon: Copy, action: () => app.duplicate(n.path) },
       n.kind === 'dir'
@@ -94,6 +100,24 @@
       { label: 'Move to trash', icon: Trash, danger: true, action: () => app.remove([n.path]), kbd: '⌫' },
     ];
     openMenu(e, items, anchor);
+  }
+
+  // ---- bookmarks: shown above the tree once there is one ----
+  let marksOpen = $state(true);
+  const marks = $derived(app.bookmarks.filter((b) => app.entries.some((e) => e.path === b.path)));
+  const stem = (p: string) => basename(p).replace(/\.(md|markdown|mdx|txt)$/i, '');
+  async function openMark(b: BookmarkT) {
+    const kind = app.entries.find((e) => e.path === b.path)?.kind;
+    if (kind === 'dir') {
+      const parts = b.path.split('/');
+      for (let i = 1; i <= parts.length; i++) app.expanded.add(parts.slice(0, i).join('/'));
+      app.selected.clear();
+      app.selected.add(b.path);
+      return app.saveExpanded();
+    }
+    const line = b.heading ? mdHeadings(await app.readText(b.path)).find((h) => headingKey(h.text) === headingKey(b.heading!))?.line : undefined;
+    await app.openAt(b.path, line);
+    if (matchMedia('(max-width: 760px)').matches) app.settings.sidebar = false;
   }
 
   function importMenu(e: MouseEvent) {
@@ -217,6 +241,28 @@
     {#if app.filter}<button class="icon-btn clear" aria-label="Clear filter" onclick={() => (app.filter = '')}><X size={12} /></button>{/if}
   </label>
 
+  {#if marks.length && !app.filter}
+    <div class="marks">
+      <button class="marks-head" aria-expanded={marksOpen} onclick={() => (marksOpen = !marksOpen)}>
+        <span class="chev" class:open={marksOpen}><ChevronRight size={12} /></span>Bookmarks
+      </button>
+      {#if marksOpen}
+        {#each marks as b (b.path + '#' + (b.heading ?? ''))}
+          <div class="mark" role="button" tabindex="0" title={b.path + (b.heading ? ' › ' + b.heading : '')}
+            onclick={() => openMark(b)}
+            onkeydown={(e) => e.key === 'Enter' && openMark(b)}
+            oncontextmenu={(e) => openMenu(e, [{ label: 'Remove bookmark', icon: BookmarkMinus, action: () => app.toggleBookmark(b.path, b.heading) }])}
+          >
+            {#if b.heading}<Hash size={13} />{:else if app.entries.find((e) => e.path === b.path)?.kind === 'dir'}<Folder size={13} />{:else}<FileText size={13} />{/if}
+            <span class="mark-name">{b.heading ?? stem(b.path)}</span>
+            {#if b.heading}<span class="mark-dir">{stem(b.path)}</span>{/if}
+            <button class="icon-btn mark-x" aria-label="Remove bookmark" onclick={(e) => (e.stopPropagation(), app.toggleBookmark(b.path, b.heading))}><X size={11} /></button>
+          </div>
+        {/each}
+      {/if}
+    </div>
+  {/if}
+
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
     class="tree"
@@ -290,6 +336,24 @@
   .filter input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 12.5px; }
   .filter input::placeholder { color: var(--text-faint); }
   .clear { width: 18px; height: 18px; }
+  .marks { padding: 0 6px 6px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .marks-head {
+    display: flex; align-items: center; gap: 4px; width: 100%; padding: 2px 4px 4px; border: 0; background: none; cursor: pointer;
+    font-size: 10.5px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: .05em;
+  }
+  .chev { display: inline-grid; transition: transform .12s; }
+  .chev.open { transform: rotate(90deg); }
+  .mark {
+    display: flex; align-items: center; gap: 7px; height: 26px; padding: 0 4px 0 8px; border-radius: 5px; cursor: pointer;
+    color: var(--text-muted); font-size: 13px;
+  }
+  .mark:hover { background: var(--bg-hover); color: var(--text); }
+  .mark :global(svg) { flex: none; color: var(--text-faint); }
+  .mark-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mark-dir { font-size: 11px; color: var(--text-faint); white-space: nowrap; }
+  .mark-x { margin-left: auto; width: 18px; height: 18px; opacity: 0; }
+  .mark:hover .mark-x, .mark:focus-within .mark-x { opacity: 1; }
+  @media (pointer: coarse) { .mark { height: 38px; } .mark-x { opacity: 1; } }
   .tree { flex: 1; overflow-y: auto; padding: 2px 0 12px; outline: none; }
   .tree.drop { background: var(--accent-soft); }
   .empty { padding: 24px 16px; color: var(--text-faint); text-align: center; font-size: 12px; line-height: 1.6; }

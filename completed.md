@@ -69,6 +69,9 @@
 - [x] Daily notes + templates: calendar icon (sidebar) / palette opens `Daily/YYYY-MM-DD.md` (local date), created
       from `Templates/Daily.md` if present; `Templates/` notes appear in the `/` menu and palette with `{{date}}`
       `{{time}}` `{{title}}` `{{cursor}}`; slash menu now ranks the best match first once you type
+- [x] Bookmarks (files, folders, headings) at the top of Files — from the tree / tab / outline menus, palette or
+      `⌘/Ctrl+Shift+B`; ⌘P lists recently opened files first; pinned tabs (tab menu) sit first and don't close by
+      accident; Close others; Reopen closed tab (tab menu / palette)
 
 ## Later
 
