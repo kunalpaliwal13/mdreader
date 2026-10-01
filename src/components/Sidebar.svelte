@@ -2,9 +2,10 @@
   import {
     FilePlus, FolderPlus, Import, Search, Trash, Settings as SettingsIcon, PanelLeftClose, X,
     Pencil, Copy, FileDown, Archive, FileText, FolderUp, FileArchive, FolderTree, TextSearch, ListTree, CalendarDays,
-    Bookmark, BookmarkMinus, Hash, ChevronRight, Folder,
+    Bookmark, BookmarkMinus, Hash, ChevronRight, Folder, History,
   } from '@lucide/svelte';
   import TreeNode, { type TreeCtx } from './TreeNode.svelte';
+  import HistoryPanel from './HistoryPanel.svelte';
   import type { Bookmark as BookmarkT } from '../lib/app.svelte';
   import { mdHeadings, headingKey } from '../lib/headings';
   import TrashPanel from './TrashPanel.svelte';
@@ -96,6 +97,7 @@
       n.kind === 'dir'
         ? { label: 'Export as ZIP', icon: Archive, action: () => exportZip(n.path) }
         : { label: 'Download', icon: FileDown, action: () => exportMd(n.path) },
+      ...(n.kind === 'file' ? [{ label: 'Version history', icon: History, action: () => app.showHistory(n.path) }] : []),
       { sep: true },
       { label: 'Move to trash', icon: Trash, danger: true, action: () => app.remove([n.path]), kbd: '⌫' },
     ];
@@ -307,6 +309,7 @@
   {#if !app.narrow}
     {#if app.panel === 'trash'}<TrashPanel onclose={() => (app.panel = null)} />{/if}
     {#if app.panel === 'settings'}<SettingsPanel onclose={() => (app.panel = null)} />{/if}
+    {#if app.panel === 'history'}<HistoryPanel onclose={() => (app.panel = null)} />{/if}
   {/if}
 </aside>
 

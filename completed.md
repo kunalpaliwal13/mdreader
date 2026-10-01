@@ -81,4 +81,5 @@
 - [ ] Open a real folder on disk (Chromium)
 - [x] Per-note look via front matter: `preset: sepia`, `font: serif` (preview + exports; Settings says when a note overrides)
 - [x] Custom CSS (Appearance → Custom CSS): styles the preview and exports
-- [ ] Version history per file
+- [x] Version history: a version every 5 minutes of editing (last 50 per note, follows renames/moves); file menu or
+      palette → Version history to preview (with a +/− lines hint) and restore — the current text is kept first

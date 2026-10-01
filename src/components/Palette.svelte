@@ -71,6 +71,7 @@
             ...(app.mode !== 'preview'
               ? templateFiles(app.entries).map((p) => ({ id: 'tpl:' + p, label: 'Insert template: ' + basename(p).replace(/\.(md|markdown|mdx|txt)$/i, ''), run: () => app.insertTemplate(p) }))
               : []),
+            { id: 'history', label: 'Show version history', run: () => app.showHistory(a) },
             { id: 'rename', label: 'Rename current file', run: () => (showView('files'), (app.renaming = a)) },
             { id: 'bookmark', label: app.isBookmarked(a) ? 'Remove bookmark' : 'Bookmark current file', kbd: `${mod}⇧B`, run: () => app.toggleBookmark(a) },
             { id: 'pin', label: app.pinned.has(a) ? 'Unpin tab' : 'Pin tab', run: () => app.togglePin(a) },

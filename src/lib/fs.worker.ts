@@ -226,13 +226,61 @@ async function emptyTrash() {
   if (await exists(TRASH)) await removeRaw(TRASH);
 }
 
+// ---- version history: .history/<encoded path>/<timestamp>.md (hidden from the tree like .trash) ----
+const HISTORY = '.history';
+const histDir = (path: string) => `${HISTORY}/${encodeURIComponent(path)}`;
+
+async function stamps(path: string): Promise<number[]> {
+  if (!(await exists(histDir(path)))) return [];
+  const out: number[] = [];
+  // @ts-ignore
+  for await (const name of (await dir(histDir(path))).keys() as AsyncIterable<string>) out.push(parseInt(name));
+  return out.sort((a, b) => b - a);
+}
+
+/** Keep what's on disk now as a version, unless the newest one is younger than minGap ms or identical. */
+async function snapshot(path: string, minGap: number, keep: number): Promise<boolean> {
+  if (!(await exists(path))) return false;
+  const list = await stamps(path);
+  if (list[0] && Date.now() - list[0] < minGap) return false;
+  const text = await read(path);
+  if (!text || (list[0] && (await read(`${histDir(path)}/${list[0]}.md`)) === text)) return false;
+  await write(`${histDir(path)}/${Date.now()}.md`, text);
+  for (const t of list.slice(keep - 1)) await removeRaw(`${histDir(path)}/${t}.md`);
+  return true;
+}
+
+async function versions(path: string): Promise<{ at: number; size: number }[]> {
+  const out: { at: number; size: number }[] = [];
+  for (const at of await stamps(path)) out.push({ at, size: (await readBytes(`${histDir(path)}/${at}.md`)).byteLength });
+  return out;
+}
+
+const version = (path: string, at: number) => read(`${histDir(path)}/${at}.md`);
+
+/** History follows renames and moves (a folder move carries every file's history under it). */
+async function moveHistory(from: string, to: string) {
+  if (!(await exists(HISTORY))) return;
+  const names: string[] = [];
+  // @ts-ignore
+  for await (const name of (await dir(HISTORY)).keys() as AsyncIterable<string>) names.push(name);
+  for (const name of names) {
+    const p = decodeURIComponent(name);
+    const n = p === from ? to : p.startsWith(from + '/') ? to + p.slice(from.length) : null;
+    if (n && !(await exists(histDir(n)))) await move(`${HISTORY}/${name}`, histDir(n));
+  }
+}
+
 /** 'memory' in private windows: nothing outlives the tab. */
 async function storage(): Promise<'opfs' | 'memory'> {
   await root();
   return memory ? 'memory' : 'opfs';
 }
 
-const ops = { list, read, readBytes, write, mkdir, move, copy, trash, listTrash, restore, purge, emptyTrash, exists, uniquePath, storage };
+const ops = {
+  list, read, readBytes, write, mkdir, move, copy, trash, listTrash, restore, purge, emptyTrash, exists, uniquePath, storage,
+  snapshot, versions, version, moveHistory,
+};
 export type Ops = typeof ops;
 
 // Serialize everything: sync access handles are exclusive per file.

@@ -90,7 +90,9 @@ class App {
   cursor = $state({ line: 1, col: 1 });
   sidebarView = $state<SidebarView>('files');
   /** settings / trash panel (sidebar popover on desktop, bottom sheet on phones) */
-  panel = $state<'trash' | 'settings' | null>(null);
+  panel = $state<'trash' | 'settings' | 'history' | null>(null);
+  /** the file whose versions the History panel shows */
+  historyOf = $state<string | null>(null);
   headings = $state<Heading[]>([]);
   /** the open note's own look from its front matter (overrides the preview settings) */
   docStyle = $state<DocStyle>({});
@@ -427,6 +429,8 @@ class App {
       this.timers.delete(p);
       this.saveState = 'saving';
       try {
+        // keep the text being replaced as a version, at most every 5 minutes (50 per note)
+        await fs.snapshot(p, 5 * 60_000, 50).catch(() => {});
         await fs.write(p, this.texts[p] ?? '');
         if (!this.timers.size) this.saveState = 'saved';
       } catch (err) {
@@ -524,7 +528,22 @@ class App {
     const to = join(dirname(path), name);
     await this.flushUnder(path);
     const ok = await this.op(async () => (await fs.move(path, to), true));
-    if (ok) this.remap(path, to);
+    if (ok) this.remap(path, to), fs.moveHistory(path, to).catch(() => {});
+  }
+
+  showHistory(path: string) {
+    this.historyOf = path;
+    this.panel = 'history';
+  }
+
+  /** Bring back an earlier version; the current text is kept as a version first, so this can be undone too. */
+  async restoreVersion(path: string, at: number) {
+    await this.flush(path);
+    await fs.snapshot(path, 0, 50);
+    const text = await fs.version(path, at);
+    if (!(path in this.texts)) await this.open(path);
+    this.edit(path, 0, (this.texts[path] ?? '').length, text);
+    this.notify('Version restored');
   }
 
   private async flushUnder(path: string) {
@@ -540,7 +559,7 @@ class App {
       if (to === p || destDir === p || destDir.startsWith(p + '/')) continue;
       await this.flushUnder(p);
       const ok = await this.op(async () => (await fs.move(p, to), true));
-      if (ok) this.remap(p, to);
+      if (ok) this.remap(p, to), fs.moveHistory(p, to).catch(() => {});
     }
     if (destDir) this.expanded.add(destDir);
   }

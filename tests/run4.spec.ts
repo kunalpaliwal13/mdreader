@@ -325,3 +325,24 @@ test('custom CSS styles the preview and survives a reload', async ({ page }) => 
   await page.reload();
   await expect(preview(page).locator('h1').first()).toHaveCSS('color', 'rgb(255, 0, 0)');
 });
+
+test('version history: snapshots on save, preview, restore keeps the current text as a version', async ({ page }) => {
+  await ready(page);
+  await create(page, 'file', 'hist');
+  const text = () => page.locator('.cm-content').evaluate((el: HTMLElement & { cmTile?: { view: { state: { doc: { toString(): string } } } } }) => el.cmTile!.view.state.doc.toString());
+  for (const v of ['first', 'second', 'third']) {
+    await replaceDoc(page, v);
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(page.locator('.status')).toContainText('Saved');
+  }
+  await page.locator('.row[data-path="hist.md"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Version history' }).click();
+  const items = page.locator('.panel .item');
+  await expect(items).toHaveCount(1); // "first" (one version per 5 minutes)
+  await items.first().click();
+  await expect(page.locator('.panel pre')).toHaveText('first');
+  await expect(page.locator('.panel .delta')).toContainText('+1');
+  await page.getByRole('button', { name: 'Restore this version' }).click();
+  await expect.poll(text).toBe('first');
+  await expect(items).toHaveCount(2); // "third" was kept before restoring
+});

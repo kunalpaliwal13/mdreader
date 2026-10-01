@@ -11,6 +11,7 @@
   import MobileBar from './components/MobileBar.svelte';
   import TrashPanel from './components/TrashPanel.svelte';
   import SettingsPanel from './components/SettingsPanel.svelte';
+  import HistoryPanel from './components/HistoryPanel.svelte';
   import { app } from './lib/app.svelte';
   import { importDrop, hasFiles } from './lib/transfer';
 
@@ -184,6 +185,7 @@
 {#if app.narrow}
   {#if app.panel === 'trash'}<TrashPanel onclose={() => (app.panel = null)} />{/if}
   {#if app.panel === 'settings'}<SettingsPanel onclose={() => (app.panel = null)} />{/if}
+  {#if app.panel === 'history'}<HistoryPanel onclose={() => (app.panel = null)} />{/if}
 {/if}
 
 <Menu />
