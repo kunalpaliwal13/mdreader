@@ -1,8 +1,9 @@
 // GFM pipe tables, Advanced Tables-style: Tab / Shift-Tab / Enter move between cells and re-align the table,
 // and a toolbar above the table (while the cursor is in it) adds, moves, aligns and deletes rows and columns.
-import { EditorSelection, StateField, type EditorState } from '@codemirror/state';
-import { showTooltip, type Command, type EditorView, type KeyBinding, type Tooltip, type TooltipView } from '@codemirror/view';
+import { EditorSelection, StateEffect, StateField, type EditorState, type Extension } from '@codemirror/state';
+import { showTooltip, type Command, type EditorView, type KeyBinding, type Rect, type Tooltip, type TooltipView } from '@codemirror/view';
 import { syntaxTree } from '@codemirror/language';
+import { isolateHistory } from '@codemirror/commands';
 import type { SyntaxNode } from '@lezer/common';
 import { mount, unmount } from 'svelte';
 import { writable } from 'svelte/store';
@@ -22,9 +23,17 @@ type Table = {
 };
 
 const PIPE = /(?<!\\)\|/; // an escaped \| stays inside its cell
-const PREFIX = /^[ \t]*(?:>[ \t]?)*/;
+// quote markers + indentation, repeated on every line (">   " keeps a list indent inside a quote)
+const PREFIX = /^(?:[ \t]*>)*[ \t]*/;
 const DELIM_CELL = /^:?-+:?$/;
 const CODE = new Set(['FencedCode', 'CodeBlock', 'HTMLBlock', 'CommentBlock']);
+// a line that opens another block (heading, list item) ends the table, as in comrak
+const BLOCK = /^ {0,3}(?:#{1,6}(?:\s|$)|[-+*]\s|\d{1,9}[.)]\s)/;
+
+const prefixOf = (t: string) => PREFIX.exec(t)![0];
+const depth = (t: string) => (prefixOf(t).match(/>/g) ?? []).length;
+/** Could be a row of a table whose lines sit at quote depth q. */
+const rowLike = (t: string, q: number) => PIPE.test(t) && depth(t) === q && !BLOCK.test(t.slice(prefixOf(t).length));
 
 // ponytail: East Asian wide + emoji count as 2 columns, ZWJ sequences overcount; use a wcwidth table if that matters
 const width = (s: string) =>
@@ -46,40 +55,53 @@ function spans(text: string, from: number): [number, number][] {
   while (text[i] === ' ' || text[i] === '\t') i++;
   if (text[i] === '|') i++;
   let start = i;
+  // like comrak: a run of pipes stays in the cell when escaped or of even length (||spoiler||), else its last pipe ends it
   for (; i < text.length; i++) {
-    if (text[i] === '\\') i++;
-    else if (text[i] === '|') (out.push([start, i]), (start = i + 1));
+    if (text[i] !== '|') continue;
+    let k = 1;
+    while (text[i + k] === '|') k++;
+    if (text[i - 1] !== '\\' && k % 2) out.push([start, i + k - 1]), (start = i + k);
+    i += k - 1;
   }
   if (text.slice(start).trim()) out.push([start, text.length]);
   return out;
 }
 
-const cellsOf = (text: string) => spans(text, PREFIX.exec(text)![0].length).map(([a, b]) => text.slice(a, b).trim());
+const cellsOf = (text: string) => spans(text, prefixOf(text).length).map(([a, b]) => text.slice(a, b).trim());
 const isDelim = (text: string) => {
   const c = cellsOf(text);
   return c.length > 0 && c.every((x) => DELIM_CELL.test(x));
 };
 const alignOf = (d: string): Align => (d.startsWith(':') ? (d.endsWith(':') ? 'center' : 'left') : d.endsWith(':') ? 'right' : '');
 
+/** Code, HTML or $$ math: never a table. Also true where a huge doc isn't parsed yet (fail closed). */
 function inCode(state: EditorState, pos: number) {
-  for (let n: SyntaxNode | null = syntaxTree(state).resolveInner(pos, -1); n; n = n.parent) if (CODE.has(n.name)) return true;
-  return false;
+  const tree = syntaxTree(state);
+  if (tree.length < pos) return true;
+  for (let n: SyntaxNode | null = tree.resolveInner(pos, -1); n; n = n.parent) if (CODE.has(n.name)) return true;
+  // comrak's $$ math can't cross a blank line: an odd $$ count since the paragraph start = inside math
+  // ponytail: a $$ inside a code span counts too
+  const doc = state.doc;
+  let n = doc.lineAt(pos).number;
+  while (n > 1 && doc.line(n - 1).text.trim()) n--;
+  return (state.sliceDoc(doc.line(n).from, pos).match(/\$\$/g) ?? []).length % 2 === 1;
 }
 
 /**
- * The table around pos. GFM: the header is the line right above the first delimiter row (same cell count);
- * later delimiter-looking lines are body rows. Rows run while lines contain a pipe.
+ * The table around pos. Rows run while lines have a pipe, stay at the same quote depth and don't open another block.
+ * GFM: the header is the line right above the first delimiter row; later delimiter-looking lines are body rows.
+ * The header and delimiter may disagree on cell count while you add or remove a column: re-align repairs it.
  */
 function tableAt(state: EditorState, pos: number): Table | null {
   const doc = state.doc;
   const line = doc.lineAt(pos);
-  if (!PIPE.test(line.text) || inCode(state, pos)) return null;
+  const q = depth(line.text);
+  if (!rowLike(line.text, q) || inCode(state, pos)) return null;
   let top = line.number, bottom = line.number;
-  while (top > 1 && PIPE.test(doc.line(top - 1).text)) top--;
-  while (bottom < doc.lines && PIPE.test(doc.line(bottom + 1).text)) bottom++;
+  while (top > 1 && rowLike(doc.line(top - 1).text, q)) top--;
+  while (bottom < doc.lines && rowLike(doc.line(bottom + 1).text, q)) bottom++;
   let d = 0;
-  for (let n = top + 1; n <= bottom && !d; n++)
-    if (isDelim(doc.line(n).text) && cellsOf(doc.line(n).text).length === cellsOf(doc.line(n - 1).text).length) d = n;
+  for (let n = top + 1; n <= bottom && !d; n++) if (isDelim(doc.line(n).text)) d = n;
   if (!d || line.number < d - 1) return null;
   const head = doc.line(d - 1);
   const rows = [cellsOf(head.text)];
@@ -87,7 +109,7 @@ function tableAt(state: EditorState, pos: number): Table | null {
   for (let n = d + 1; n <= bottom; n++) rows.push(cellsOf(doc.line(n).text));
 
   // where the cursor is: row, column, offset inside the cell text
-  const sp = spans(line.text, PREFIX.exec(line.text)![0].length);
+  const sp = spans(line.text, prefixOf(line.text).length);
   const x = pos - line.from;
   let col = sp.findIndex(([, b]) => x <= b);
   if (col < 0) col = Math.max(0, sp.length - 1);
@@ -100,7 +122,7 @@ function tableAt(state: EditorState, pos: number): Table | null {
   return {
     from: head.from,
     to: doc.line(bottom).to,
-    prefix: PREFIX.exec(head.text)![0],
+    prefix: prefixOf(head.text),
     rows,
     aligns: delim.map(alignOf),
     row: line.number <= d ? 0 : line.number - d,
@@ -137,17 +159,29 @@ function render(t: Pick<Table, 'prefix' | 'rows' | 'aligns'>) {
   return { text, at: (r: number, c: number) => at[Math.min(r, at.length - 1)][Math.min(c, n - 1)] };
 }
 
-type Edit = { rows: string[][]; aligns: Align[]; row: number; col: number; select?: boolean; offset?: number };
+type Edit = {
+  rows: string[][];
+  aligns: Align[];
+  row: number;
+  col: number;
+  select?: boolean;
+  offset?: number;
+  effects?: StateEffect<unknown>[];
+  tail?: string; // text right after the table (createTable's blank line)
+};
 
-/** One dispatch per action (re-align + move), so a single undo reverts it. */
+/** One dispatch per action (re-align + move), its own undo step: typing right after it doesn't merge in. */
 function apply(view: EditorView, t: Table, e: Edit) {
   const out = render({ prefix: t.prefix, rows: e.rows, aligns: e.aligns });
   const start = t.from + out.at(e.row, e.col);
   const len = (e.rows[e.row]?.[e.col] ?? '').length;
-  const changed = out.text !== view.state.sliceDoc(t.from, t.to);
+  const text = out.text + (e.tail ?? '');
+  const changed = text !== view.state.sliceDoc(t.from, t.to);
   view.dispatch({
-    changes: changed ? { from: t.from, to: t.to, insert: out.text } : undefined,
+    changes: changed ? { from: t.from, to: t.to, insert: text } : undefined,
     selection: e.select ? EditorSelection.range(start, start + len) : EditorSelection.cursor(start + Math.min(e.offset ?? len, len)),
+    effects: e.effects,
+    annotations: isolateHistory.of('full'),
     scrollIntoView: true,
     userEvent: 'input',
   });
@@ -169,44 +203,61 @@ const width0 = (t: Table) => Math.max(t.aligns.length, ...t.rows.map((r) => r.le
 const blankRow = (t: Table) => Array<string>(width0(t)).fill('');
 const keep = (t: Table, rows = t.rows, aligns = t.aligns): Edit => ({ rows, aligns, row: t.row, col: t.col, offset: t.offset });
 
-// Excel-style return: after Tabbing along a row, Enter goes down to the column the Tab run started in
-const tabStart = new WeakMap<EditorView, { from: number; row: number; col: number }>();
+// Excel-style return: after Tabbing along a row, Enter goes down to the column the Tab run started in.
+// Lives in the EditorState (one per file); a click or arrow key ends the run.
+type Run = { from: number; row: number; start: number; landed: number };
+const setRun = StateEffect.define<Run | null>();
+const tabRun = StateField.define<Run | null>({
+  create: () => null,
+  update(v, tr) {
+    for (const e of tr.effects) if (e.is(setRun)) return e.value;
+    if (!v || tr.isUserEvent('select') || tr.isUserEvent('undo') || tr.isUserEvent('redo')) return null;
+    return tr.docChanged ? { ...v, from: tr.changes.mapPos(v.from) } : v;
+  },
+});
+/** The run still matches: same table + row, and the cursor is where the last Tab put it. */
+const runOf = (t: Table, view: EditorView) => {
+  const r = view.state.field(tabRun, false);
+  return r && r.from === t.from && r.row === t.row && r.landed === t.col ? r : null;
+};
 
 const nextCell = onTable((t, view) => {
   const n = width0(t);
   if (t.col + 1 < n) {
-    const a = tabStart.get(view);
-    if (!a || a.from !== t.from || a.row !== t.row) tabStart.set(view, { from: t.from, row: t.row, col: t.col });
-    return { ...keep(t), col: t.col + 1, select: true };
+    const start = runOf(t, view)?.start ?? t.col;
+    return { ...keep(t), col: t.col + 1, select: true, effects: [setRun.of({ from: t.from, row: t.row, start, landed: t.col + 1 })] };
   }
-  tabStart.delete(view);
   const rows = t.row + 1 < t.rows.length ? t.rows : [...t.rows, blankRow(t)];
-  return { rows, aligns: t.aligns, row: t.row + 1, col: 0, select: true };
+  return { rows, aligns: t.aligns, row: t.row + 1, col: 0, select: true, effects: [setRun.of(null)] };
 });
 
-const prevCell = onTable((t) => {
-  if (t.col > 0) return { ...keep(t), col: t.col - 1, select: true };
-  if (t.row > 0) return { ...keep(t), row: t.row - 1, col: width0(t) - 1, select: true };
+const prevCell = onTable((t, view) => {
+  const r = runOf(t, view);
+  if (t.col > 0) return { ...keep(t), col: t.col - 1, select: true, effects: [setRun.of(r && { ...r, landed: t.col - 1 })] };
+  if (t.row > 0) return { ...keep(t), row: t.row - 1, col: width0(t) - 1, select: true, effects: [setRun.of(null)] };
   return { ...keep(t), select: true };
 });
 
 const nextRow = onTable((t, view) => {
   const last = t.row === t.rows.length - 1;
-  // Enter on an empty last row leaves the table (a blank line keeps the next paragraph out of it)
+  // Enter on an empty last row leaves the table, still inside its quote/list (prefix kept); the blank line keeps
+  // the next paragraph out of the table
   if (last && t.row > 0 && t.rows[t.row].every((c) => !c)) {
     const out = render({ prefix: t.prefix, rows: t.rows.slice(0, -1), aligns: t.aligns });
+    const sep = '\n' + t.prefix.trimEnd() + '\n' + t.prefix;
     view.dispatch({
-      changes: { from: t.from, to: t.to, insert: out.text + '\n\n' },
-      selection: { anchor: t.from + out.text.length + 2 },
+      changes: { from: t.from, to: t.to, insert: out.text + sep },
+      selection: { anchor: t.from + out.text.length + sep.length },
+      effects: setRun.of(null),
+      annotations: isolateHistory.of('full'),
       scrollIntoView: true,
       userEvent: 'input',
     });
     return true;
   }
-  const a = tabStart.get(view);
-  tabStart.delete(view);
+  const col = runOf(t, view)?.start ?? t.col;
   const rows = last ? [...t.rows, blankRow(t)] : t.rows;
-  return { rows, aligns: t.aligns, row: t.row + 1, col: a && a.from === t.from && a.row === t.row ? a.col : t.col, select: true };
+  return { rows, aligns: t.aligns, row: t.row + 1, col, select: true, effects: [setRun.of(null)] };
 });
 
 /** `| a | b |` + Enter outside a table: add the delimiter row and a first body row. */
@@ -214,15 +265,21 @@ const createTable: Command = (view) => {
   const { state } = view;
   const sel = state.selection.main;
   if (!sel.empty || state.selection.ranges.length > 1) return false;
-  const line = state.doc.lineAt(sel.head);
-  const prefix = PREFIX.exec(line.text)![0];
+  const doc = state.doc;
+  const line = doc.lineAt(sel.head);
+  const prefix = prefixOf(line.text);
   const body = line.text.slice(prefix.length).trimEnd();
   if (!/^\|.*(?<!\\)\|$/.test(body) || sel.head < line.from + prefix.length + body.length) return false;
+  // not a ||spoiler|| line, a stray delimiter row, a header whose delimiter is already below, code or math
+  const next = line.number < doc.lines ? doc.line(line.number + 1) : null;
+  if ((body.startsWith('||') && body.endsWith('||')) || isDelim(line.text) || (next && isDelim(next.text))) return false;
   if (inCode(state, sel.head)) return false;
   const head = cellsOf(line.text);
   if (!head.some(Boolean)) return false;
   const t: Table = { from: line.from, to: line.to, prefix, rows: [head], aligns: head.map(() => ''), row: 0, col: 0, offset: 0 };
-  return apply(view, t, { rows: [head, blankRow(t)], aligns: t.aligns, row: 1, col: 0 });
+  // a paragraph right below would be swallowed as a row (GFM): keep a blank line between
+  const tail = next && !PIPE.test(next.text) && next.text.slice(prefixOf(next.text).length).trim() ? '\n' + prefix.trimEnd() : '';
+  return apply(view, t, { rows: [head, blankRow(t)], aligns: t.aligns, row: 1, col: 0, tail });
 };
 
 const swap = <T>(a: T[], i: number, j: number) => ((a = [...a]), ([a[i], a[j]] = [a[j], a[i]]), a);
@@ -261,17 +318,25 @@ export const tableCommands = {
 
 export type TableAction = keyof typeof tableCommands;
 
+// a selection across lines keeps Tab = indent and Enter = replace, even when it ends in a table
+const oneLine =
+  (c: Command): Command =>
+  (v) => {
+    const { anchor, head } = v.state.selection.main;
+    return v.state.doc.lineAt(anchor).number === v.state.doc.lineAt(head).number && c(v);
+  };
+
 /** Part of smart typing: Plain mode leaves Tab and Enter alone. */
 export const tableKeymap: KeyBinding[] = [
-  { key: 'Tab', run: nextCell, shift: prevCell },
-  { key: 'Enter', run: (v) => nextRow(v) || createTable(v) },
+  { key: 'Tab', run: oneLine(nextCell), shift: oneLine(prevCell) },
+  { key: 'Enter', run: (v) => oneLine(nextRow)(v) || createTable(v) },
 ];
 
 // ---- toolbar ----
 export type TableInfo = { align: Align; row: number; col: number; rows: number; cols: number };
 const infoOf = (t: Table): TableInfo => ({ align: t.aligns[t.col] ?? '', row: t.row, col: t.col, rows: t.rows.length, cols: width0(t) });
 
-function createToolbar(view: EditorView): TooltipView {
+function createToolbar(view: EditorView, above: boolean): TooltipView {
   const dom = document.createElement('div');
   dom.className = 'cm-table-tip';
   const t = tableAt(view.state, view.state.selection.main.head);
@@ -281,6 +346,20 @@ function createToolbar(view: EditorView): TooltipView {
   return {
     dom,
     offset: { x: -4, y: 0 },
+    // below the table: under the last row's last visual line (rows wrap, nearly always on phones)
+    getCoords: above
+      ? undefined
+      : (p) => {
+          const a = view.coordsAtPos(p);
+          if (!a) return null as unknown as Rect; // anchor not rendered: CM hides the tooltip
+          const b = view.coordsAtPos(view.state.doc.lineAt(p).to, -1) ?? a;
+          return { left: a.left, right: a.right, top: a.top, bottom: b.bottom };
+        },
+    // never over the tab bar or the search panel: hidden while its spot is outside the editor's scroller
+    positioned() {
+      const r = dom.getBoundingClientRect(), s = view.scrollDOM.getBoundingClientRect();
+      dom.style.visibility = r.top < s.top || r.bottom > s.bottom ? 'hidden' : '';
+    },
     update(u) {
       if (!u.docChanged && !u.selectionSet) return;
       const t = tableAt(u.state, u.state.selection.main.head);
@@ -290,20 +369,29 @@ function createToolbar(view: EditorView): TooltipView {
   };
 }
 
+// one create per side, so switching sides builds a fresh tooltip instead of keeping the old placement
+const createAbove = (v: EditorView) => createToolbar(v, true);
+const createBelow = (v: EditorView) => createToolbar(v, false);
+
 /** Sits in the blank line above the table (or below it) so it never covers text. */
 function toolbarFor(state: EditorState): Tooltip | null {
   if (state.selection.ranges.length > 1) return null;
   const t = tableAt(state, state.selection.main.head);
   if (!t) return null;
-  const blank = (n: number) => n >= 1 && n <= state.doc.lines && !state.doc.line(n).text.trim();
-  const first = state.doc.lineAt(t.from).number, last = state.doc.lineAt(t.to);
+  const doc = state.doc;
+  // blank: nothing but the quote prefix, or past the end of the document
+  const blank = (n: number) => n > doc.lines || (n >= 1 && !doc.line(n).text.replace(PREFIX, '').trim());
+  const first = doc.lineAt(t.from).number, last = doc.lineAt(t.to);
   const above = blank(first - 1) || !blank(last.number + 1);
-  return { pos: (above ? t.from : last.from) + t.prefix.length, above, arrow: false, create: createToolbar };
+  return { pos: (above ? t.from : last.from) + t.prefix.length, above, arrow: false, create: above ? createAbove : createBelow };
 }
 
 /** Not part of smart typing: the toolbar only acts when clicked, so it stays on in Plain mode. */
-export const tableToolbar = StateField.define<Tooltip | null>({
-  create: toolbarFor,
-  update: (v, tr) => (tr.docChanged || tr.selection ? toolbarFor(tr.state) : v),
-  provide: (f) => showTooltip.from(f),
-});
+export const tableToolbar: Extension = [
+  tabRun,
+  StateField.define<Tooltip | null>({
+    create: toolbarFor,
+    update: (v, tr) => (tr.docChanged || tr.selection ? toolbarFor(tr.state) : v),
+    provide: (f) => showTooltip.from(f),
+  }),
+];

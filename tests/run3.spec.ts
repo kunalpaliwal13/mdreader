@@ -275,3 +275,92 @@ test('table editor: pasted tables stay as-is, escaped pipes survive, Plain leave
   await page.keyboard.press('Enter');
   expect((await doc(page)).split('\n').slice(-3)).toEqual(['', '| x | y |', '']);
 });
+
+// exact document + selection, straight from CodeMirror
+const cm = (page: Page) =>
+  page.locator('.cm-content').evaluate((el: HTMLElement & { cmTile?: { view: unknown } }) => {
+    const v = el.cmTile!.view as { state: { doc: { toString(): string }; selection: { main: { from: number; to: number } }; sliceDoc(a: number, b: number): string } };
+    const { from, to } = v.state.selection.main;
+    return { doc: v.state.doc.toString(), sel: v.state.sliceDoc(from, to) };
+  });
+const setDoc = (page: Page, text: string, at: number) =>
+  page.locator('.cm-content').evaluate(
+    (el: HTMLElement & { cmTile?: { view: unknown } }, [t, a]) => {
+      const v = el.cmTile!.view as { state: { doc: { length: number } }; dispatch(s: object): void; focus(): void };
+      v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: t }, selection: { anchor: a } });
+      v.focus();
+    },
+    [text, at] as [string, number],
+  );
+
+test('table editor: spoilers, math, nearby blocks and callouts are respected', async ({ page }) => {
+  await ready(page);
+  await newDoc(page, 'tbl3');
+  // ||spoiler|| stays one cell
+  const spoiler = '| Clue | Answer |\n| --- | --- |\n| Who? | ||the butler|| |';
+  await setDoc(page, spoiler, 3);
+  await page.keyboard.press('Tab');
+  expect((await cm(page)).doc).toBe('| Clue | Answer         |\n| ---- | -------------- |\n| Who? | ||the butler|| |');
+  // Enter never turns a spoiler line or $$ math into a table
+  for (const [text, at] of [['||The butler did it||', 21], ['$$\n|x| + |y|', 12]] as const) {
+    await setDoc(page, text, at);
+    await page.keyboard.press('Enter');
+    expect((await cm(page)).doc).not.toContain('| --- |');
+  }
+  // a delimiter row short of the header is repaired, never duplicated
+  await setDoc(page, '| a | b | c |\n|---|---|', 23);
+  await page.keyboard.press('Enter');
+  expect((await cm(page)).doc).toBe('| a   | b   | c   |\n| --- | --- | --- |\n|     |     |     |');
+  // a quote or heading right below the table is not a row
+  await setDoc(page, '| a | b |\n|---|---|\n| 1 | 2 |\n> note: a | b', 21);
+  await page.keyboard.press('Tab');
+  expect((await cm(page)).doc.split('\n').at(-1)).toBe('> note: a | b');
+  // leaving a table inside a callout stays in the callout
+  await setDoc(page, '> [!NOTE]\n> | a | b |\n> | - | - |\n> | 1 | 2 |', 42);
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('x');
+  expect((await cm(page)).doc.split('\n').slice(-2)).toEqual(['>', '> x']);
+  await expect(preview(page).locator('.markdown-alert')).toContainText('x');
+});
+
+test('table editor: undo steps, smart return, selections, header repair, toolbar placement and focus', async ({ page }) => {
+  await ready(page);
+  await newDoc(page, 'tbl4');
+  // typing after a table action is its own undo step
+  await page.keyboard.type('| Name | Age |');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Ann');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('31');
+  await page.keyboard.press('ControlOrMeta+z');
+  expect((await cm(page)).doc).toBe('| Name | Age |\n| ---- | --- |\n| Ann  |     |');
+
+  // the Excel-style return column is dropped once you move another way
+  await setDoc(page, '| a | b | c |\n| - | - | - |\n| 1 | 2 | 3 |\n| 4 | 5 | 6 |', 29);
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  expect((await cm(page)).sel).toBe('6');
+
+  // a selection over several lines keeps Tab = indent
+  await setDoc(page, '- item\n\n| a | b |\n| - | - |\n| 1 | 2 |', 8);
+  await page.keyboard.press('Shift+ControlOrMeta+End');
+  await page.keyboard.press('Tab');
+  expect((await cm(page)).doc).toBe('- item\n\n  | a | b |\n  | - | - |\n  | 1 | 2 |');
+
+  // a header that just gained a cell: Tab repairs the delimiter
+  await setDoc(page, '| a | b | Notes |\n| - | - |\n| 1 | 2 |', 3);
+  await page.keyboard.press('Tab');
+  expect((await cm(page)).doc).toBe('| a   | b   | Notes |\n| --- | --- | ----- |\n| 1   | 2   |       |');
+
+  // a table that ends the doc right under text puts its toolbar below, not over the text
+  await setDoc(page, 'Results:\n| Name | Age |\n| --- | --- |\n| Ann | 31 |', 40);
+  await expect(page.locator('.cm-tooltip.cm-table-tip')).toHaveClass(/cm-tooltip-below/);
+
+  // dismissing the ⋯ menu gives focus back to the editor
+  await page.getByRole('button', { name: 'More table actions' }).click();
+  await page.keyboard.press('Escape');
+  await page.keyboard.type('Z');
+  expect((await cm(page)).doc).toContain('Z');
+});

@@ -7,10 +7,14 @@ export type MenuItem =
 
 export const menu = $state<{ open: boolean; x: number; y: number; items: MenuItem[] }>({ open: false, x: 0, y: 0, items: [] });
 
+// focus goes back where it was when the menu closes (e.g. the editor, for the table toolbar's menu)
+let prev: HTMLElement | null = null;
+
 /** Open at the mouse (contextmenu) or below an anchor element (button click). */
 export function openMenu(e: MouseEvent, items: MenuItem[], anchor?: HTMLElement) {
   e.preventDefault();
   e.stopPropagation();
+  prev = document.activeElement as HTMLElement | null;
   if (anchor) {
     const r = anchor.getBoundingClientRect();
     menu.x = r.left;
@@ -24,5 +28,8 @@ export function openMenu(e: MouseEvent, items: MenuItem[], anchor?: HTMLElement)
 }
 
 export function closeMenu() {
+  if (!menu.open) return;
   menu.open = false;
+  prev?.focus({ preventScroll: true });
+  prev = null;
 }
