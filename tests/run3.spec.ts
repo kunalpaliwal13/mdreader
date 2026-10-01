@@ -93,3 +93,40 @@ test('smart typing: auto-pair, wrap selection, move lines, multi-cursor; Plain t
   await page.keyboard.press('ControlOrMeta+Shift+e');
   await expect(page.locator('.status .chip')).toHaveCount(0);
 });
+
+const pasteHtml = (page: Page, html: string, text: string) =>
+  page.locator('.cm-content').evaluate(
+    (el, [h, t]) => {
+      const dt = new DataTransfer();
+      dt.setData('text/html', h);
+      dt.setData('text/plain', t);
+      const e = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'clipboardData', { value: dt });
+      el.dispatchEvent(e);
+    },
+    [html, text],
+  );
+
+test('paste: rich HTML becomes markdown, code-editor HTML and ⌘⇧V stay plain', async ({ page }) => {
+  await ready(page);
+  await newDoc(page, 'paste');
+  await pasteHtml(
+    page,
+    '<h2>Title</h2><p><strong>bold</strong> and <a href="https://x.io">link</a></p><ul><li>one</li><li>two</li></ul><table><thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>',
+    'Title bold and link one two a b 1 2',
+  );
+  await expect.poll(() => doc(page)).toContain('## Title');
+  const md = await doc(page);
+  expect(md).toContain('**bold** and [link](https://x.io)');
+  expect(md).toContain('- one\n- two');
+  expect(md).toContain('| a | b |');
+
+  await page.keyboard.press('ControlOrMeta+a');
+  await pasteHtml(page, '<div style="color:red"><span style="color:blue">const x = 1;</span></div>', 'const x = 1;');
+  await expect.poll(() => doc(page)).toBe('const x = 1;');
+
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.locator('.cm-content').press('ControlOrMeta+Shift+v');
+  await pasteHtml(page, '<h1>Big</h1>', 'Big');
+  await expect.poll(() => doc(page)).toBe('Big');
+});

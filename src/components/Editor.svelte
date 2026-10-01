@@ -3,6 +3,7 @@
   import { EditorState, EditorSelection, Compartment, type Extension } from '@codemirror/state';
   import { EditorView, keymap, drawSelection, dropCursor, highlightActiveLine, placeholder, rectangularSelection, crosshairCursor, type Command } from '@codemirror/view';
   import { smartTyping } from '../lib/editor/smart';
+  import { isRichHtml, htmlToMarkdown } from '../lib/editor/htmlPaste';
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
   import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBackward } from '@codemirror/lang-markdown';
   import { languages } from '@codemirror/language-data';
@@ -77,9 +78,9 @@
 
   const isUrl = (s: string) => /^https?:\/\/\S+$/.test(s.trim());
 
-  function insertAtCursor(v: EditorView, text: string, pos?: number) {
+  function insertAtCursor(v: EditorView, text: string, pos?: number, end?: number) {
     const at = pos ?? v.state.selection.main.from;
-    const to = pos ?? v.state.selection.main.to;
+    const to = end ?? pos ?? v.state.selection.main.to;
     v.dispatch({ changes: { from: at, to, insert: text }, selection: { anchor: at + text.length } });
   }
 
@@ -93,7 +94,16 @@
     if (links.length && docPath === path) insertAtCursor(v, links.join('\n'), pos);
   }
 
+  // ⌘⇧V = paste as plain text (the browser may still hand us HTML)
+  let plainPaste = false;
   const handlers = EditorView.domEventHandlers({
+    keydown(e) {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'v') {
+        plainPaste = true;
+        setTimeout(() => (plainPaste = false), 400);
+      }
+      return false;
+    },
     paste(e, v) {
       const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/'));
       if (files.length) {
@@ -101,8 +111,18 @@
         saveImages(v, files);
         return true;
       }
-      // pasting a URL over selected text makes a link
       const text = e.clipboardData?.getData('text/plain') ?? '';
+      // rich HTML (web pages, Docs, Notion) becomes markdown; ⌘⇧V and plain text paste as-is
+      const html = e.clipboardData?.getData('text/html') ?? '';
+      if (html && !plainPaste && isRichHtml(html)) {
+        e.preventDefault();
+        const { from, to } = v.state.selection.main;
+        htmlToMarkdown(html)
+          .then((md) => insertAtCursor(v, md || text, from, to))
+          .catch(() => insertAtCursor(v, text, from, to));
+        return true;
+      }
+      // pasting a URL over selected text makes a link
       const sel = v.state.selection.main;
       if (!sel.empty && isUrl(text)) {
         e.preventDefault();
