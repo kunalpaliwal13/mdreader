@@ -30,10 +30,13 @@
 - [x] PWA: installable, works fully offline
 - [x] Tree keyboard navigation (arrows, Enter, F2, Delete)
 - [x] Faster first load: KaTeX and highlight.js load only when a document needs them
+- [x] Fix: bold/italic starting with `+` (e.g. `**+ FP8**` in tables) now renders
 - [x] 30 smoke tests across Chromium, WebKit, Firefox
 
 ## Next — run 3 (candidates)
 
+- [ ] Base16 app/editor themes: Medusa, Gruvbox, Tokyo Night, Catppuccin, Nord, Solarized, Dracula, One Dark,
+      Monokai, Everforest, Rosé Pine (light/dark variants)
 - [ ] Storage fallback for private windows
 - [ ] Open a real folder on disk (Chromium)
 - [ ] Custom CSS and per-file theme via front matter

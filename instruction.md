@@ -65,7 +65,7 @@ npm run build && npm test                        # smoke tests against dist/
 | Commands | `⌘/Ctrl+Shift+P`, or `⌘/Ctrl+P` then type `>` |
 | Search all files | `⌘/Ctrl+Shift+F` or the Search tab in the sidebar |
 | Outline & backlinks | Outline tab in the sidebar |
-| Link notes | `[[note]]` or `[[note|label]]`; type `[[` for suggestions; clicking a missing note creates it |
+| Link notes | `[[note]]` or `[[note\|label]]`; type `[[` for suggestions; clicking a missing note creates it |
 | Resize split | Drag the divider; double-click resets |
 | Install / offline | Browser's install button (or command palette → Install); works offline after first visit |
 | Sidebar | `⌘/Ctrl+\`; tree supports arrow keys, Enter, F2, Delete |

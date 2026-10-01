@@ -67,6 +67,7 @@ test('outline jumps, wikilinks create + resolve, backlinks, autocomplete', async
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('See [[Welc');
   await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('Welcome');
+  await page.waitForTimeout(150); // CodeMirror ignores Enter for 75ms after the list opens
   await page.keyboard.press('Enter');
   await expect(page.locator('.cm-content')).toContainText('See [[Welcome]]');
 

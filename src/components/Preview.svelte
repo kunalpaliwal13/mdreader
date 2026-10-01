@@ -40,6 +40,7 @@
   const BLOCK = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'PRE', 'TABLE', 'TR', 'BLOCKQUOTE', 'DIV', 'HR', 'DT', 'DD', 'FIGURE']);
   let ignoreUntil = 0;
 
+  // ponytail: re-measures every block per scroll frame; cache offsets per render (invalidate on resize/image load) if long docs feel slow
   function marks(): { line: number; top: number }[] {
     const base = scroller.getBoundingClientRect().top - scroller.scrollTop;
     const out: { line: number; top: number }[] = [];

@@ -22,6 +22,7 @@ test('welcome doc renders every syntax', async ({ page }) => {
   await expect(md.locator('.footnotes li')).toHaveCount(2);
   await expect(md.locator('dl dt').filter({ hasText: 'WASM' })).toHaveCount(1);
   await expect(md.locator('mark')).toHaveText('highlight');
+  await expect(md.locator('td strong').filter({ hasText: '+ FP8' })).toHaveCount(1);
   await expect(md.locator('sub')).toHaveText('2');
   await expect(md.locator('details summary')).toHaveText('Click to expand');
   await expect(md).toContainText('🚀');

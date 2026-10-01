@@ -13,7 +13,7 @@ syntax the renderer understands — edit it freely, it's just a file.
 
 ## Text
 
-**Bold**, *italic*, ***both***, ~~strikethrough~~, __underline__, ==highlight==, ++inserted++,
+**Bold**, *italic*, ***both***, ~~strikethrough~~, __underline__, ==highlight==,
 `inline code`, H~2~O subscript, E = mc^2^ superscript, ||spoiler|| and emoji :rocket: :sparkles: :tada:.
 
 Autolinks: https://commonmark.org and <mail@example.com>. A [relative link](#tables) jumps inside
@@ -48,6 +48,7 @@ yet — click it in the preview to create it. Type `[[` in the editor to autocom
 | GFM tables  |   ✅   | aligned columns  |
 | Footnotes   |   ✅   | see below[^1]    |
 | Math        |   ✅   | KaTeX            |
+| **+ FP8**   |   ✅   | *bold in cells*  |
 
 ## Quotes & alerts
 

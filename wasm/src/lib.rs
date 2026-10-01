@@ -39,7 +39,7 @@ fn options() -> Options<'static> {
     e.underline = true;
     e.spoiler = true;
     e.highlight = true;
-    e.insert = true;
+    // `insert` (++text++) is off: it breaks emphasis that starts with "+", e.g. **+ FP8** (comrak 0.55)
     e.wikilinks_title_after_pipe = true;
     // GitHub-style prefix: bare ids like "images" or "title" get stripped by DOMPurify's clobbering guard
     e.header_id_prefix = Some("user-content-".into());
@@ -105,6 +105,10 @@ mod tests {
         assert!(out.contains("markdown-alert"), "{out}");
         assert!(out.contains(r#"lang=\"mermaid\""#), "{out}");
         assert!(out.contains(r#""line":4"#), "{out}");
+        // regression: bold/italic starting with "+" (inside and outside tables)
+        let plus = render("**+ FP8 activations** (x)\n\n| a |\n|---|\n| **+ FP8** *+ w* |\n");
+        assert_eq!(plus.matches("<strong").count(), 2, "{plus}");
+        assert!(plus.contains("<em"), "{plus}");
         let wl = render("see [[Other note|the other]] and [[plain]]");
         assert!(wl.contains("data-wikilink"), "{wl}");
     }
