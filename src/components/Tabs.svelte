@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { X, PanelLeft, PenLine, Columns2, Eye, Download, FileText, FileCode, Printer } from '@lucide/svelte';
-  import { app, type Mode } from '../lib/app.svelte';
+  import { X, PanelLeft, PenLine, Columns2, Eye, Download, FileText, FileCode, Printer, Sun, Moon } from '@lucide/svelte';
+  import { app } from '../lib/app.svelte';
   import { openMenu } from '../lib/menu.svelte';
   import { basename, dirname } from '../lib/fs';
   import { exportMd, exportHtml, exportPdf } from '../lib/transfer';
@@ -11,17 +11,6 @@
     for (const t of app.tabs) seen.set(basename(t), (seen.get(basename(t)) ?? 0) + 1);
     return seen;
   });
-
-  const modes: { id: Mode; label: string; icon: typeof PenLine }[] = [
-    { id: 'edit', label: 'Edit', icon: PenLine },
-    { id: 'split', label: 'Split', icon: Columns2 },
-    { id: 'preview', label: 'Preview', icon: Eye },
-  ];
-
-  function setMode(m: Mode) {
-    app.settings.mode = m;
-    app.saveSettings();
-  }
 
   function exportMenu(e: MouseEvent) {
     const p = app.active;
@@ -68,23 +57,39 @@
     {/each}
   </div>
 
-  {#if app.active}
-    <div class="right">
-      <div class="seg" role="radiogroup" aria-label="View mode">
-        {#each modes.filter((m) => !(app.narrow && m.id === 'split')) as m (m.id)}
-          <button
-            class:on={app.mode === m.id}
-            role="radio"
-            aria-checked={app.mode === m.id}
-            title="{m.label} (⌘E cycles)"
-            aria-label={m.label}
-            onclick={() => setMode(m.id)}
-          ><m.icon size={14} /></button>
-        {/each}
-      </div>
+  <div class="right">
+    {#if app.active}
+      {#if !app.narrow}
+        <button
+          class="icon-btn"
+          class:active={app.mode === 'split'}
+          aria-pressed={app.mode === 'split'}
+          title="Split view"
+          aria-label="Split view"
+          onclick={() => app.toggleSplit()}
+        ><Columns2 size={15} /></button>
+      {/if}
+      <button
+        class="pill"
+        class:on={app.mode === 'preview'}
+        aria-pressed={app.mode === 'preview'}
+        title={app.mode === 'preview' ? 'Back to editing (⌘E)' : 'Preview (⌘E)'}
+        onclick={() => app.togglePreview()}
+      >
+        {#if app.mode === 'preview'}<PenLine size={14} /><span>Edit</span>{:else}<Eye size={14} /><span>Preview</span>{/if}
+      </button>
+    {/if}
+    <button
+      class="icon-btn"
+      title={app.dark ? 'Light mode' : 'Dark mode'}
+      aria-label={app.dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      onclick={() => app.toggleTheme()}
+    >{#if app.dark}<Sun size={15} />{:else}<Moon size={15} />{/if}</button>
+    {#if app.active}
+      <span class="sep"></span>
       <button class="icon-btn" title="Export" aria-label="Export" onclick={exportMenu}><Download size={15} /></button>
-    </div>
-  {/if}
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -126,16 +131,20 @@
   .tab:hover .close, .tab.active .close { opacity: 1; }
   .close:hover { background: var(--bg-active); color: var(--text); }
   .right { display: flex; align-items: center; gap: 6px; padding: 0 10px; flex: none; }
-  .seg { display: flex; padding: 2px; gap: 2px; border-radius: 7px; background: var(--bg-hover); }
-  .seg button {
-    display: grid; place-items: center; width: 28px; height: 22px; padding: 0; border: 0; border-radius: 5px;
-    background: none; color: var(--text-muted); cursor: pointer;
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px 0 10px; margin: 0 2px;
+    border: 1px solid var(--border-strong); border-radius: 14px; background: var(--bg-elevated); color: var(--text);
+    font-weight: 500; font-size: 12.5px; cursor: pointer; transition: background .12s, border-color .12s, color .12s;
   }
-  .seg button:hover { color: var(--text); }
-  .seg button.on { background: var(--bg-elevated); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / .1); }
+  .pill:hover { background: var(--bg-hover); }
+  .pill.on { background: var(--text); border-color: var(--text); color: var(--bg); }
+  .pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .sep { width: 1px; height: 18px; margin: 0 4px; background: var(--border); }
   @media (max-width: 760px) {
     .tab { max-width: 150px; padding-left: 10px; }
     .dir { display: none; }
     .right { padding: 0 6px; gap: 2px; }
+    .pill span { display: none; }
+    .pill { padding: 0 9px; }
   }
 </style>

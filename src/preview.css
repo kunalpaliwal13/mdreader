@@ -67,6 +67,8 @@
 .md a { color: var(--pv-link); text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 2px; }
 .md a:hover { text-decoration-color: currentColor; }
 .md strong { font-weight: 650; }
+.md a[data-wikilink] { text-decoration-style: solid; }
+.md a.wikilink-missing { color: var(--pv-muted); text-decoration-style: dashed; }
 .md mark { background: var(--pv-mark); color: inherit; padding: 0 2px; border-radius: 2px; }
 .md ins { text-decoration: underline; text-decoration-color: var(--pv-tip); }
 .md .spoiler, .md span.spoiler { background: var(--pv-text); color: transparent; border-radius: 3px; cursor: pointer; transition: color .15s; }

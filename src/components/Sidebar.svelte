@@ -1,10 +1,12 @@
 <script lang="ts">
   import {
     FilePlus, FolderPlus, Import, Search, Trash, Settings as SettingsIcon, PanelLeftClose, X,
-    Pencil, Copy, FileDown, Archive, FileText, FolderUp, FileArchive,
+    Pencil, Copy, FileDown, Archive, FileText, FolderUp, FileArchive, FolderTree, TextSearch, ListTree,
   } from '@lucide/svelte';
   import TreeNode, { type TreeCtx } from './TreeNode.svelte';
   import TrashPanel from './TrashPanel.svelte';
+  import SearchView from './SearchView.svelte';
+  import OutlineView from './OutlineView.svelte';
   import SettingsPanel from './SettingsPanel.svelte';
   import { app } from '../lib/app.svelte';
   import { openMenu, type MenuItem } from '../lib/menu.svelte';
@@ -139,6 +141,38 @@
   function treeKey(e: KeyboardEvent) {
     if (app.renaming || (e.target as HTMLElement).tagName === 'INPUT') return;
     const sel = [...app.selected];
+    const cur = rows.findIndex((r) => r.path === (app.anchor ?? sel.at(-1)));
+    const pick = (i: number) => {
+      const r = rows[Math.max(0, Math.min(rows.length - 1, i))];
+      if (!r) return;
+      app.selected.clear();
+      app.selected.add(r.path);
+      app.anchor = r.path;
+      document.querySelector(`.row[data-path="${CSS.escape(r.path)}"]`)?.scrollIntoView({ block: 'nearest' });
+    };
+    const node = rows[cur];
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      return pick(cur < 0 ? 0 : cur + (e.key === 'ArrowDown' ? 1 : -1));
+    }
+    if (e.key === 'ArrowRight' && node?.kind === 'dir') {
+      e.preventDefault();
+      if (!isOpen(node.path)) toggle(node.path);
+      else pick(cur + 1);
+      return;
+    }
+    if (e.key === 'ArrowLeft' && node) {
+      e.preventDefault();
+      if (node.kind === 'dir' && isOpen(node.path)) toggle(node.path);
+      else pick(rows.findIndex((r) => r.path === dirname(node.path)));
+      return;
+    }
+    if (e.key === 'Enter' && node) {
+      e.preventDefault();
+      if (node.kind === 'dir') toggle(node.path);
+      else app.open(node.path);
+      return;
+    }
     if (e.key === 'F2' && sel.length === 1) {
       e.preventDefault();
       app.renaming = sel[0];
@@ -160,6 +194,23 @@
     </div>
   </header>
 
+  <div class="views" role="tablist" aria-label="Sidebar view">
+    {#each [['files', 'Files', FolderTree], ['search', 'Search', TextSearch], ['outline', 'Outline', ListTree]] as const as [id, label, Icon] (id)}
+      <button
+        role="tab"
+        aria-selected={app.sidebarView === id}
+        class:on={app.sidebarView === id}
+        title={label + (id === 'search' ? ' (⌘⇧F)' : '')}
+        onclick={() => (app.sidebarView = id)}
+      ><Icon size={14} /><span>{label}</span></button>
+    {/each}
+  </div>
+
+  {#if app.sidebarView === 'search'}
+    <SearchView />
+  {:else if app.sidebarView === 'outline'}
+    <OutlineView />
+  {:else}
   <label class="filter">
     <Search size={13} />
     <input placeholder="Filter files" bind:value={app.filter} onkeydown={(e) => e.key === 'Escape' && (app.filter = '')} />
@@ -193,6 +244,7 @@
       </div>
     {/each}
   </div>
+  {/if}
 
   <footer>
     <button class="foot-btn" class:active={panel === 'trash'} onclick={() => { panel = panel === 'trash' ? null : 'trash'; app.refreshTrash(); }}>
@@ -218,6 +270,13 @@
     border-right: 1px solid var(--border);
     min-width: 0;
   }
+  .views { display: flex; gap: 2px; margin: 0 8px 8px; padding: 2px; border-radius: 7px; background: var(--bg-hover); }
+  .views button {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 24px; border: 0;
+    border-radius: 5px; background: none; color: var(--text-muted); font-size: 12px; cursor: pointer;
+  }
+  .views button:hover { color: var(--text); }
+  .views button.on { background: var(--bg-elevated); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
   header { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 8px 0 14px; }
   .brand { font-weight: 600; letter-spacing: -0.01em; font-size: 13px; }
   .actions { display: flex; gap: 1px; }

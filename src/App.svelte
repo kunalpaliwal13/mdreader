@@ -7,7 +7,8 @@
   import StatusBar from './components/StatusBar.svelte';
   import EmptyState from './components/EmptyState.svelte';
   import Menu from './components/Menu.svelte';
-  import { app, type Mode } from './lib/app.svelte';
+  import Palette from './components/Palette.svelte';
+  import { app } from './lib/app.svelte';
   import { importDrop, hasFiles } from './lib/transfer';
 
   let ready = $state(false);
@@ -44,6 +45,20 @@
   function onKey(e: KeyboardEvent) {
     const mod = e.metaKey || e.ctrlKey;
     if (!mod) return;
+    const k = e.key.toLowerCase();
+    if (k === 'p') {
+      // ⌘P files, ⌘⇧P commands (browser print stays reachable via Export → PDF)
+      e.preventDefault();
+      if (app.palette.open && !e.shiftKey === !app.palette.query.startsWith('>')) app.palette.open = false;
+      else app.openPalette(e.shiftKey ? '>' : '');
+      return;
+    }
+    if (k === 'f' && e.shiftKey) {
+      e.preventDefault();
+      app.settings.sidebar = true;
+      app.sidebarView = 'search';
+      return;
+    }
     if (e.key === '\\') {
       e.preventDefault();
       app.settings.sidebar = !app.settings.sidebar;
@@ -53,10 +68,26 @@
       app.flush().then(() => app.active && app.notify('Saved'));
     } else if (e.key.toLowerCase() === 'e' && !e.shiftKey && app.active) {
       e.preventDefault();
-      const order: Mode[] = app.narrow ? ['edit', 'preview'] : ['edit', 'split', 'preview'];
-      app.settings.mode = order[(order.indexOf(app.mode) + 1) % order.length];
-      app.saveSettings();
+      app.togglePreview();
     }
+  }
+
+  // editor / preview split resize
+  let contentEl = $state<HTMLElement>();
+  function startSplit(e: PointerEvent) {
+    const el = e.currentTarget as HTMLElement;
+    el.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent) => {
+      const r = contentEl!.getBoundingClientRect();
+      app.settings.split = Math.round(Math.min(80, Math.max(20, ((ev.clientX - r.left) / r.width) * 100)));
+    };
+    const up = () => {
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      app.saveSettings();
+    };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
   }
 
   // sidebar resize
@@ -95,6 +126,7 @@
   ondragover={windowDrag.dragover}
   ondrop={windowDrag.drop}
   onbeforeunload={() => app.flush()}
+  onbeforeinstallprompt={(e) => (e.preventDefault(), (app.installPrompt = e as unknown as { prompt: () => void }))}
 />
 <svelte:document onvisibilitychange={() => document.visibilityState === 'hidden' && app.flush()} />
 
@@ -111,9 +143,13 @@
 
   <main>
     <Tabs />
-    <div class="content mode-{app.mode}">
+    <div class="content mode-{app.mode}" style="--split:{app.settings.split}%" bind:this={contentEl}>
       {#if app.active}
         <div class="pane editor-pane"><Editor path={app.active} /></div>
+        {#if app.mode === 'split'}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="divider" title="Drag to resize · double-click to reset" onpointerdown={startSplit} ondblclick={() => ((app.settings.split = 50), app.saveSettings())}></div>
+        {/if}
         <div class="pane preview-pane"><Preview path={app.active} text={app.activeText} /></div>
       {:else if ready}
         <EmptyState />
@@ -130,6 +166,7 @@
 {/if}
 
 <Menu />
+<Palette />
 
 <style>
   .app {
@@ -145,7 +182,13 @@
   .resize:hover { background: linear-gradient(to right, transparent 2px, var(--accent) 2px, var(--accent) 3px, transparent 3px); }
   .scrim { display: none; }
   main { display: flex; flex-direction: column; min-width: 0; height: 100%; }
-  .content { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .content {
+    position: relative; flex: 1; min-height: 0; display: grid;
+    grid-template-columns: minmax(0, var(--split, 50%)) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
+    view-transition-name: workspace;
+  }
+  .divider { position: absolute; top: 0; bottom: 0; left: calc(var(--split) - 3px); width: 6px; cursor: col-resize; z-index: 5; }
+  .divider:hover, .divider:active { background: linear-gradient(to right, transparent 2px, var(--accent) 2px, var(--accent) 4px, transparent 4px); }
   .pane { min-width: 0; min-height: 0; overflow: hidden; }
   .content.mode-split .editor-pane { border-right: 1px solid var(--border); }
   .content.mode-edit { grid-template-columns: minmax(0, 1fr); }

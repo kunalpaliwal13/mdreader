@@ -6,6 +6,7 @@ use wasm_bindgen::prelude::*;
 #[derive(Serialize)]
 struct Heading {
     level: u8,
+    line: usize,
     text: String,
     id: String,
 }
@@ -39,6 +40,7 @@ fn options() -> Options<'static> {
     e.spoiler = true;
     e.highlight = true;
     e.insert = true;
+    e.wikilinks_title_after_pipe = true;
     // GitHub-style prefix: bare ids like "images" or "title" get stripped by DOMPurify's clobbering guard
     e.header_id_prefix = Some("user-content-".into());
     e.header_id_prefix_in_href = true;
@@ -67,7 +69,8 @@ pub fn render(md: &str) -> String {
             NodeValue::Heading(h) => {
                 let text = node.collect_text();
                 let id = anchors.anchorize(&text);
-                headings.push(Heading { level: h.level, text, id });
+                let line = node.data().sourcepos.start.line;
+                headings.push(Heading { level: h.level, line, text, id });
             }
             _ => {}
         }
@@ -101,5 +104,8 @@ mod tests {
         assert!(out.contains("<mark"), "{out}");
         assert!(out.contains("markdown-alert"), "{out}");
         assert!(out.contains(r#"lang=\"mermaid\""#), "{out}");
+        assert!(out.contains(r#""line":4"#), "{out}");
+        let wl = render("see [[Other note|the other]] and [[plain]]");
+        assert!(wl.contains("data-wikilink"), "{wl}");
     }
 }

@@ -1,7 +1,8 @@
 import { SvelteSet } from 'svelte/reactivity';
+import { flushSync, tick } from 'svelte';
 import type { EditorState } from '@codemirror/state';
 import { fs, dirname, basename, join, isMarkdown, type Entry, type TrashEntry } from './fs';
-import { invalidateAsset } from './render';
+import { invalidateAsset, type Heading } from './render';
 import welcome from './welcome.md?raw';
 
 export type Mode = 'edit' | 'split' | 'preview';
@@ -14,9 +15,24 @@ export type Settings = {
   mode: Mode;
   sidebar: boolean;
   sidebarWidth: number;
+  /** mode to return to when leaving preview */
+  editMode: 'edit' | 'split';
+  /** editor share of the split view, in percent */
+  split: number;
 };
+export type SidebarView = 'files' | 'search' | 'outline';
 
-const DEFAULTS: Settings = { theme: 'system', preset: 'github', font: 'preset', size: 16, width: 760, mode: 'split', sidebar: true, sidebarWidth: 260 };
+const DEFAULTS: Settings = { theme: 'system', preset: 'github', font: 'preset', size: 16, width: 760, mode: 'split', sidebar: true, sidebarWidth: 260, editMode: 'split', split: 50 };
+
+/** Animate a DOM-changing state update with the View Transitions API where available. */
+export function transition(update: () => void) {
+  const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+  if (!doc.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return update();
+  doc.startViewTransition(() => {
+    update();
+    flushSync();
+  });
+}
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -50,6 +66,15 @@ class App {
   settings = $state<Settings>(load('mdr.settings', DEFAULTS));
   toast = $state<{ msg: string; kind: 'error' | 'info' } | null>(null);
   cursor = $state({ line: 1, col: 1 });
+  sidebarView = $state<SidebarView>('files');
+  headings = $state<Heading[]>([]);
+  palette = $state<{ open: boolean; query: string }>({ open: false, query: '' });
+  /** PWA install prompt captured from beforeinstallprompt (Chromium only). */
+  installPrompt = $state<{ prompt: () => void } | null>(null);
+  /** Registered by the editor / preview so either side can follow the other, and search/outline can jump. */
+  scrollEditorTo: ((line: number) => void) | null = null;
+  scrollPreviewTo: ((line: number) => void) | null = null;
+  focusEditorLine: ((line: number) => void) | null = null;
 
   dark = $state(false);
   /** Phone-width layout: no split view (two panes don't fit), sidebar as overlay. */
@@ -62,6 +87,81 @@ class App {
 
   get mode(): Mode {
     return this.narrow && this.settings.mode === 'split' ? 'preview' : this.settings.mode;
+  }
+
+  setMode(m: Mode) {
+    if (m === this.mode) return;
+    transition(() => {
+      this.settings.mode = m;
+      this.saveSettings();
+    });
+  }
+
+  /** The quick Preview / Edit button. */
+  togglePreview() {
+    if (this.mode === 'preview') return this.setMode(this.narrow ? 'edit' : this.settings.editMode);
+    if (!this.narrow) this.settings.editMode = this.mode === 'split' ? 'split' : 'edit';
+    this.setMode('preview');
+  }
+
+  toggleSplit() {
+    const next = this.mode === 'split' ? 'edit' : 'split';
+    this.settings.editMode = next;
+    this.setMode(next);
+  }
+
+  toggleTheme() {
+    transition(() => {
+      this.settings.theme = this.dark ? 'light' : 'dark';
+      this.saveSettings();
+    });
+  }
+
+  /** Scroll editor + preview to a source line (search hits, outline). */
+  revealLine(line: number) {
+    if (this.mode !== 'preview') this.focusEditorLine?.(line);
+    this.scrollPreviewTo?.(line);
+  }
+
+  async openAt(path: string, line?: number) {
+    await this.open(path);
+    if (!line) return;
+    await tick();
+    // the preview may still be rendering the newly opened file
+    requestAnimationFrame(() => setTimeout(() => this.revealLine(line), 60));
+  }
+
+  /** [[target]] -> path: exact path, then same folder, then any file with that name. */
+  resolveWiki(target: string, fromDoc: string): string | null {
+    const t = target.trim().replace(/\.(md|markdown)$/i, '').toLowerCase();
+    if (!t) return null;
+    const files = this.entries.filter((e) => e.kind === 'file' && isMarkdown(e.path)).map((e) => e.path);
+    const stem = (p: string) => p.replace(/\.(md|markdown|mdx|txt)$/i, '').toLowerCase();
+    return (
+      files.find((p) => stem(p) === t) ??
+      files.find((p) => stem(p) === stem(join(dirname(fromDoc), t))) ??
+      files.find((p) => stem(basename(p)) === basename(t)) ??
+      null
+    );
+  }
+
+  /** Every markdown file's text (open buffers win over disk). */
+  // ponytail: reads the whole workspace per call; add a cached index if workspaces get into the thousands
+  async readAll(): Promise<{ path: string; text: string }[]> {
+    const files = this.entries.filter((e) => e.kind === 'file' && isMarkdown(e.path));
+    return Promise.all(
+      files.map(async (f) => ({ path: f.path, text: f.path in this.texts ? this.texts[f.path] : await fs.read(f.path).catch(() => '') })),
+    );
+  }
+
+  install() {
+    this.installPrompt?.prompt();
+    this.installPrompt = null;
+  }
+
+  openPalette(query = '') {
+    this.palette.query = query;
+    this.palette.open = true;
   }
 
   get activeText() {

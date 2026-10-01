@@ -19,12 +19,22 @@
 - [x] Smoke tests on Chromium, WebKit, Firefox (Playwright, against the production build)
 - [x] GitHub Pages deploy on every push to `main`
 
-## Next — run 2 (planned)
+## Run 2 — navigation, linking, offline (2026-10-01)
 
-- [ ] File palette (`⌘P`) and command palette (`⌘⇧P`)
-- [ ] Full-text search across files
-- [ ] Outline panel and editor ↔ preview scroll sync
-- [ ] PWA: offline + installable
-- [ ] Wikilinks and backlinks
-- [ ] Resizable editor/preview split
+- [x] One-click dark/light toggle and quick Preview/Edit button next to the split toggle, with animated transitions
+- [x] File palette (`⌘P`, fuzzy) and command palette (`⌘⇧P` or type `>`)
+- [x] Full-text search across files (`⌘⇧F`), click a hit to jump to the line
+- [x] Outline panel with current-heading highlight, plus linked mentions (backlinks)
+- [x] Wikilinks `[[note]]` / `[[note|label]]`; missing notes are created on click; `[[` autocomplete
+- [x] Resizable editor/preview split; scroll sync both ways
+- [x] PWA: installable, works fully offline
+- [x] Tree keyboard navigation (arrows, Enter, F2, Delete)
+- [x] Faster first load: KaTeX and highlight.js load only when a document needs them
+- [x] 30 smoke tests across Chromium, WebKit, Firefox
+
+## Next — run 3 (candidates)
+
 - [ ] Storage fallback for private windows
+- [ ] Open a real folder on disk (Chromium)
+- [ ] Custom CSS and per-file theme via front matter
+- [ ] Version history per file

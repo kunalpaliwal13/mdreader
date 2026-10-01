@@ -8,6 +8,8 @@
   import { syntaxHighlighting, HighlightStyle, indentOnInput, bracketMatching } from '@codemirror/language';
   import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search';
   import { tags as t } from '@lezer/highlight';
+  import { autocompletion, type CompletionContext } from '@codemirror/autocomplete';
+  import { isMarkdown, basename, dirname } from '../lib/fs';
   import { app, editorStates } from '../lib/app.svelte';
 
   let { path }: { path: string } = $props();
@@ -58,6 +60,19 @@
     v.dispatch({ changes: { from: line.from, to: line.to, insert: '' } });
     return true;
   };
+
+  // [[ -> workspace file names
+  function wikiComplete(ctx: CompletionContext) {
+    const m = ctx.matchBefore(/\[\[[^\]|\n]*$/);
+    if (!m) return null;
+    const options = app.entries
+      .filter((e) => e.kind === 'file' && isMarkdown(e.path) && e.path !== current)
+      .map((e) => {
+        const label = basename(e.path).replace(/\.(md|markdown|mdx|txt)$/i, '');
+        return { label, detail: dirname(e.path), type: 'text', apply: label + ']]' };
+      });
+    return { from: m.from + 2, options, validFor: /^[^\]|\n]*$/ };
+  }
 
   const isUrl = (s: string) => /^https?:\/\/\S+$/.test(s.trim());
 
@@ -152,6 +167,11 @@
     '.cm-searchMatch': { backgroundColor: 'color-mix(in srgb, #facc15 35%, transparent)' },
     '.cm-searchMatch-selected': { backgroundColor: 'color-mix(in srgb, #f97316 45%, transparent)' },
     '.cm-matchingBracket': { backgroundColor: 'var(--bg-active)', outline: 'none' },
+    '.cm-tooltip': { border: '1px solid var(--border)', backgroundColor: 'var(--bg-elevated)', borderRadius: '8px', boxShadow: 'var(--shadow)', overflow: 'hidden' },
+    '.cm-tooltip-autocomplete > ul': { fontFamily: 'var(--font)', fontSize: '13px', maxHeight: '240px' },
+    '.cm-tooltip-autocomplete > ul > li': { padding: '4px 10px !important' },
+    '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: 'var(--accent-soft)', color: 'var(--text)' },
+    '.cm-completionDetail': { color: 'var(--text-faint)', fontStyle: 'normal', marginLeft: '8px' },
   });
 
   const extensions: Extension[] = [
@@ -167,6 +187,7 @@
     markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: false }),
     syntaxHighlighting(highlight),
     placeholder('Start writing…'),
+    autocompletion({ override: [wikiComplete], icons: false }),
     theme,
     handlers,
     keymap.of([
@@ -208,6 +229,27 @@
     app.cursor = { line: line.number, col: head - line.from + 1 };
   }
 
+  // ---- scroll sync + jump to line ----
+  let ignoreUntil = 0;
+  function topLine(): number {
+    const pad = view.documentPadding.top;
+    const y = Math.max(0, view.scrollDOM.scrollTop - pad);
+    const block = view.lineBlockAtHeight(y);
+    const line = view.state.doc.lineAt(block.from).number;
+    return line + Math.min(1, Math.max(0, (y - block.top) / Math.max(1, block.height)));
+  }
+  function scrollToLine(l: number) {
+    const doc = view.state.doc;
+    const n = Math.min(doc.lines, Math.max(1, Math.floor(l)));
+    const block = view.lineBlockAt(doc.line(n).from);
+    ignoreUntil = performance.now() + 120;
+    view.scrollDOM.scrollTop = block.top + (l - n) * block.height + view.documentPadding.top;
+  }
+  function onScroll() {
+    if (performance.now() < ignoreUntil || app.mode !== 'split') return;
+    app.scrollPreviewTo?.(topLine());
+  }
+
   onMount(() => {
     // renames/moves keep the live view; just follow the new path
     app.onRemap = (map) => (current = map(current));
@@ -218,7 +260,14 @@
     };
     current = path;
     view = new EditorView({ state: stateFor(path), parent: host });
-    view.focus();
+    view.scrollDOM.addEventListener('scroll', () => requestAnimationFrame(onScroll), { passive: true });
+    app.scrollEditorTo = scrollToLine;
+    app.focusEditorLine = (l) => {
+      const line = view.state.doc.line(Math.min(view.state.doc.lines, Math.max(1, l)));
+      view.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 60 }) });
+      view.focus();
+    };
+    if (!app.narrow) view.focus();
   });
 
   $effect(() => {
@@ -229,6 +278,8 @@
     if (view) keep();
     app.onRemap = null;
     app.editHook = null;
+    app.scrollEditorTo = null;
+    app.focusEditorLine = null;
     view?.destroy();
   });
 </script>

@@ -1,9 +1,13 @@
 import DOMPurify from 'dompurify';
-import katex from 'katex';
-import hljs from 'highlight.js/lib/common';
 import { fs, resolveRel, isImage } from './fs';
 
-export type Heading = { level: number; text: string; id: string };
+// heavy renderers load only when a document needs them
+let katexP: Promise<typeof import('katex').default> | null = null;
+let hljsP: Promise<typeof import('highlight.js/lib/common').default> | null = null;
+const getKatex = () => (katexP ??= import('katex').then((m) => m.default));
+const getHljs = () => (hljsP ??= import('highlight.js/lib/common').then((m) => m.default));
+
+export type Heading = { level: number; line: number; text: string; id: string };
 export type Parsed = { html: string; front_matter: string | null; headings: Heading[] };
 
 const worker = new Worker(new URL('./render.worker.ts', import.meta.url), { type: 'module' });
@@ -128,7 +132,18 @@ function toc(headings: Heading[]): HTMLElement {
   return nav;
 }
 
-export type RenderOpts = { docPath: string; dark: boolean; forExport?: boolean };
+export type RenderOpts = {
+  docPath: string;
+  dark: boolean;
+  forExport?: boolean;
+  /** [[wikilink]] target -> workspace path, or null when no such file exists */
+  resolveWiki?: (target: string) => string | null;
+};
+
+const keepPos = (from: Element, to: Element) => {
+  const pos = from.getAttribute('data-sourcepos');
+  if (pos) to.setAttribute('data-sourcepos', pos);
+};
 
 /**
  * Parse + sanitize + enhance into a fresh element (not attached).
@@ -146,27 +161,38 @@ export async function renderToElement(md: string, opts: RenderOpts): Promise<{ e
 
   // [[toc]] or [TOC] placeholder paragraphs
   for (const p of el.querySelectorAll('p')) {
-    if (/^\s*\[(\[toc\]|toc)\]\s*$/i.test(p.textContent ?? '')) p.replaceWith(toc(parsed.headings));
+    // [[toc]] arrives as a wikilink now that wikilinks are on
+    const only = p.childNodes.length === 1 ? (p.firstElementChild as HTMLElement | null) : null;
+    const wikiToc = only?.dataset.wikilink && /^toc$/i.test(decodeURIComponent(only.getAttribute('href') ?? ''));
+    if (wikiToc || /^\s*\[(\[toc\]|toc)\]\s*$/i.test(p.textContent ?? '')) p.replaceWith(toc(parsed.headings));
   }
 
   // math: inline spans and display blocks (```math or $$)
-  for (const node of el.querySelectorAll<HTMLElement>('[data-math-style], pre[lang="math"]')) {
-    const display = node.dataset.mathStyle === 'display' || node.tagName === 'PRE';
-    const holder = document.createElement(display ? 'div' : 'span');
-    holder.className = display ? 'math-display' : 'math-inline';
-    holder.innerHTML = katex.renderToString(node.textContent ?? '', { displayMode: display, throwOnError: false });
-    node.replaceWith(holder);
+  const maths = el.querySelectorAll<HTMLElement>('[data-math-style], pre[lang="math"]');
+  if (maths.length) {
+    const katex = await getKatex();
+    for (const node of maths) {
+      const display = node.dataset.mathStyle === 'display' || node.tagName === 'PRE';
+      const holder = document.createElement(display ? 'div' : 'span');
+      holder.className = display ? 'math-display' : 'math-inline';
+      holder.innerHTML = katex.renderToString(node.textContent ?? '', { displayMode: display, throwOnError: false });
+      keepPos(node.closest('pre') ?? node, holder);
+      (node.closest('pre') ?? node).replaceWith(holder);
+    }
   }
 
   // mermaid + code highlighting
   const jobs: Promise<void>[] = [];
-  for (const pre of el.querySelectorAll<HTMLElement>('pre')) {
+  const pres = el.querySelectorAll<HTMLElement>('pre');
+  const hljs = pres.length ? await getHljs() : null;
+  for (const pre of pres) {
     const lang = (pre.getAttribute('lang') ?? '').toLowerCase();
     const code = pre.querySelector('code');
     if (!code) continue;
     if (lang === 'mermaid') {
       const div = document.createElement('div');
       div.className = 'mermaid';
+      keepPos(pre, div);
       pre.replaceWith(div);
       const src = code.textContent ?? '';
       const hit = mermaidCache.get((opts.dark ? 'dark' : 'neutral') + '\0' + src);
@@ -174,7 +200,7 @@ export async function renderToElement(md: string, opts: RenderOpts): Promise<{ e
       else jobs.push(renderMermaid(src, opts.dark).then((svg) => void (div.innerHTML = svg)));
       continue;
     }
-    if (lang && hljs.getLanguage(lang)) {
+    if (hljs && lang && hljs.getLanguage(lang)) {
       code.innerHTML = hljs.highlight(code.textContent ?? '', { language: lang, ignoreIllegals: true }).value;
     }
     code.classList.add('hljs');
@@ -202,6 +228,16 @@ export async function renderToElement(md: string, opts: RenderOpts): Promise<{ e
       );
     }
     img.loading = 'lazy';
+  }
+
+  // [[wikilinks]]: point at the matching workspace file, or mark as not-yet-created
+  for (const a of el.querySelectorAll<HTMLAnchorElement>('a[data-wikilink]')) {
+    const target = decodeURIComponent(a.getAttribute('href') ?? '');
+    const path = opts.resolveWiki?.(target) ?? null;
+    a.dataset.target = target;
+    if (path) a.dataset.path = path;
+    else a.classList.add('wikilink-missing');
+    a.setAttribute('href', path ? encodeURI(path) : '#');
   }
 
   // external links open in a new tab; #frag points at the prefixed heading id when that's what exists

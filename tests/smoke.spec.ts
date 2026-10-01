@@ -1,31 +1,5 @@
-import { test as base, expect, type Page, type BrowserContext } from '@playwright/test';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
-// Persistent contexts: WebKit's ephemeral contexts have no OPFS. Fresh profile per test.
-const test = base.extend<{ context: BrowserContext; page: Page }>({
-  context: async ({ playwright, browserName, baseURL, viewport }, use) => {
-    const dir = mkdtempSync(join(tmpdir(), 'mdr-'));
-    const ctx = await playwright[browserName].launchPersistentContext(dir, { baseURL, viewport, acceptDownloads: true });
-    await use(ctx);
-    await ctx.close();
-    rmSync(dir, { recursive: true, force: true });
-  },
-  page: async ({ context }, use) => {
-    const page = context.pages()[0] ?? (await context.newPage());
-    // WebKit keeps OPFS outside the profile dir, so wipe it (from a non-app page on the same origin)
-    await page.route('**/__blank__', (r) => r.fulfill({ body: '<!doctype html><title>blank</title>', contentType: 'text/html' }));
-    await page.goto('/__blank__');
-    await page.evaluate(async () => {
-      localStorage.clear();
-      const root = await navigator.storage.getDirectory();
-      // @ts-ignore
-      for await (const name of root.keys()) await root.removeEntry(name, { recursive: true });
-    });
-    await use(page);
-  },
-});
+import { test, expect } from './fixture';
+import type { Page } from '@playwright/test';
 
 const shots = process.env.SHOTS;
 const shot = async (page: Page, name: string) => shots && page.screenshot({ path: `${shots}/${test.info().project.name}-${name}.png` });
@@ -138,14 +112,25 @@ test('file tree CRUD, edit, persist, move, trash, restore', async ({ page }) => 
 test('modes, theme, export', async ({ page }) => {
   await page.goto('/');
   await expect(preview(page).locator('h1').first()).toBeVisible();
-  await page.getByRole('radio', { name: 'Preview' }).click();
-  await expect(page.locator('.editor-pane')).toBeHidden();
-  await page.getByRole('radio', { name: 'Edit' }).click();
+  // split toggle -> edit only, quick Preview button -> preview, Edit -> back to edit
+  await page.getByRole('button', { name: 'Split view' }).click();
   await expect(page.locator('.preview-pane')).toBeHidden();
-  await page.getByRole('radio', { name: 'Split' }).click();
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  await expect(page.locator('.editor-pane')).toBeHidden();
+  await expect(page.locator('.preview-pane')).toBeVisible();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await expect(page.locator('.preview-pane')).toBeHidden();
+  await page.getByRole('button', { name: 'Split view' }).click();
+  await expect(page.locator('.preview-pane')).toBeVisible();
+
+  // one-click theme toggle next to the view buttons
+  await page.getByRole('button', { name: 'Switch to dark mode' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.getByRole('button', { name: 'Switch to light mode' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('button', { name: 'Dark' }).click();
+  await page.getByRole('button', { name: 'Dark', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.getByRole('button', { name: /Sepia/ }).click();
   await expect(preview(page)).toHaveClass(/preset-sepia/);

@@ -15,8 +15,11 @@
       <button class="btn" onclick={() => importPicker('files')}><Import size={14} /> Import</button>
     </div>
     <dl class="keys">
+      <dt>{mod} P</dt><dd>Go to file</dd>
+      <dt>{mod} ⇧ P</dt><dd>Command palette</dd>
+      <dt>{mod} ⇧ F</dt><dd>Search in all files</dd>
       <dt>{mod} \</dt><dd>Toggle sidebar</dd>
-      <dt>{mod} E</dt><dd>Cycle edit / split / preview</dd>
+      <dt>{mod} E</dt><dd>Toggle preview</dd>
       <dt>{mod} S</dt><dd>Save now</dd>
       <dt>{mod} B · I · K</dt><dd>Bold · italic · link</dd>
       <dt>F2</dt><dd>Rename in tree</dd>

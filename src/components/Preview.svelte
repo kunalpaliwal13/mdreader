@@ -1,7 +1,8 @@
 <script lang="ts">
   import { app } from '../lib/app.svelte';
   import { renderToElement } from '../lib/render';
-  import { resolveRel, isMarkdown } from '../lib/fs';
+  import { onMount } from 'svelte';
+  import { resolveRel, isMarkdown, dirname } from '../lib/fs';
 
   let { path, text }: { path: string; text: string } = $props();
   let article: HTMLElement;
@@ -15,7 +16,12 @@
   async function run(job: { path: string; text: string; dark: boolean }) {
     busy = true;
     try {
-      const { el } = await renderToElement(job.text, { docPath: job.path, dark: job.dark });
+      const { el, parsed } = await renderToElement(job.text, {
+        docPath: job.path,
+        dark: job.dark,
+        resolveWiki: (t) => app.resolveWiki(t, job.path),
+      });
+      app.headings = parsed.headings;
       el.querySelectorAll('input[type=checkbox]').forEach((i) => i.removeAttribute('disabled'));
       article.replaceChildren(...el.childNodes);
       if (job.path !== lastPath) scroller.scrollTop = 0;
@@ -29,6 +35,54 @@
       }
     }
   }
+
+  // ---- scroll sync: map source lines <-> preview offsets via data-sourcepos ----
+  const BLOCK = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'PRE', 'TABLE', 'TR', 'BLOCKQUOTE', 'DIV', 'HR', 'DT', 'DD', 'FIGURE']);
+  let ignoreUntil = 0;
+
+  function marks(): { line: number; top: number }[] {
+    const base = scroller.getBoundingClientRect().top - scroller.scrollTop;
+    const out: { line: number; top: number }[] = [];
+    for (const el of article.querySelectorAll<HTMLElement>('[data-sourcepos]')) {
+      if (!BLOCK.has(el.tagName)) continue;
+      const line = parseInt(el.dataset.sourcepos!);
+      const top = el.getBoundingClientRect().top - base;
+      const last = out.at(-1);
+      // keep lines and offsets both increasing (nested blocks share lines)
+      if (!last || (line > last.line && top >= last.top)) out.push({ line, top });
+    }
+    return out;
+  }
+
+  function scrollToLine(l: number) {
+    const m = marks();
+    if (!m.length) return;
+    let top = 0;
+    if (l >= m[0].line) {
+      let i = m.findLastIndex((x) => x.line <= l);
+      const a = m[i], b = m[i + 1];
+      top = b ? a.top + ((l - a.line) / (b.line - a.line)) * (b.top - a.top) : a.top;
+      top -= 16;
+    }
+    ignoreUntil = performance.now() + 120;
+    scroller.scrollTop = top;
+  }
+
+  function onScroll() {
+    if (performance.now() < ignoreUntil || app.mode !== 'split') return;
+    const m = marks();
+    if (!m.length) return;
+    const y = scroller.scrollTop + 16;
+    if (scroller.scrollTop <= 0) return app.scrollEditorTo?.(1);
+    const i = Math.max(0, m.findLastIndex((x) => x.top <= y));
+    const a = m[i], b = m[i + 1];
+    app.scrollEditorTo?.(b ? a.line + ((y - a.top) / Math.max(1, b.top - a.top)) * (b.line - a.line) : a.line);
+  }
+
+  onMount(() => {
+    app.scrollPreviewTo = scrollToLine;
+    return () => (app.scrollPreviewTo = null);
+  });
 
   $effect(() => {
     const job = { path, text, dark: app.dark };
@@ -65,6 +119,16 @@
     const a = t.closest('a');
     const href = a?.getAttribute('href');
     if (!a || !href) return;
+    if (a.dataset.wikilink) {
+      e.preventDefault();
+      if (a.dataset.path) app.open(a.dataset.path);
+      else {
+        // Obsidian-style: following a link to a missing note creates it
+        const name = (a.dataset.target ?? 'Untitled').replace(/[\\:*?"<>|]/g, '-');
+        app.createFile(dirname(path), name.endsWith('.md') ? name : name + '.md', `# ${name}\n\n`).then(() => (app.renaming = null));
+      }
+      return;
+    }
     if (href.startsWith('#')) {
       e.preventDefault();
       const id = decodeURIComponent(href.slice(1));
@@ -80,7 +144,7 @@
   }
 </script>
 
-<div class="scroller" bind:this={scroller}>
+<div class="scroller" bind:this={scroller} onscroll={() => requestAnimationFrame(onScroll)}>
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
   <article
     bind:this={article}

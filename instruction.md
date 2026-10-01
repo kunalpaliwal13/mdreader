@@ -59,8 +59,16 @@ npm run build && npm test                        # smoke tests against dist/
 | Import | Sidebar import icon: markdown files, a folder, or a `.zip`; or drop files anywhere |
 | Export | Download icon next to the tabs: `.md`, `.html`, PDF; folder → ZIP from its menu |
 | Images | Paste or drop into the editor — saved to `assets/` next to the file |
-| View mode | Edit / Split / Preview toggle, or `⌘/Ctrl+E` |
-| Sidebar | `⌘/Ctrl+\` |
+| Preview | **Preview** button (top right) or `⌘/Ctrl+E`; **Split** icon next to it toggles side-by-side |
+| Dark / light | Sun/moon button next to Preview (System option in the gear menu) |
+| Go to file | `⌘/Ctrl+P` (fuzzy) |
+| Commands | `⌘/Ctrl+Shift+P`, or `⌘/Ctrl+P` then type `>` |
+| Search all files | `⌘/Ctrl+Shift+F` or the Search tab in the sidebar |
+| Outline & backlinks | Outline tab in the sidebar |
+| Link notes | `[[note]]` or `[[note|label]]`; type `[[` for suggestions; clicking a missing note creates it |
+| Resize split | Drag the divider; double-click resets |
+| Install / offline | Browser's install button (or command palette → Install); works offline after first visit |
+| Sidebar | `⌘/Ctrl+\`; tree supports arrow keys, Enter, F2, Delete |
 | Save now | `⌘/Ctrl+S` (autosave runs ~0.5s after typing) |
 | Formatting | `⌘/Ctrl+B` bold, `⌘/Ctrl+I` italic, `⌘/Ctrl+K` link |
 | Table of contents | Put `[[toc]]` on its own line |

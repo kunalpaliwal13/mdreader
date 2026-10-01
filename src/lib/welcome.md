@@ -20,6 +20,12 @@ Autolinks: https://commonmark.org and <mail@example.com>. A [relative link](#tab
 the doc. A hard break ends this line\
 and continues here.
 
+## Links between notes
+
+Wikilinks connect files: [[Welcome]] points back here, and [[My first note|this one]] doesn't exist
+yet — click it in the preview to create it. Type `[[` in the editor to autocomplete file names. The
+**Outline** tab in the sidebar shows headings and every file linking here.
+
 ## Lists
 
 - Unordered item
