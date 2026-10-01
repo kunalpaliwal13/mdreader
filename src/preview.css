@@ -69,6 +69,20 @@
 .md strong { font-weight: 650; }
 .md a[data-wikilink] { text-decoration-style: solid; }
 .md a.wikilink-missing { color: var(--pv-muted); text-decoration-style: dashed; }
+/* ![[embeds]] read as part of this note: a quiet rule marks them, the source link shows on hover (Obsidian-style) */
+.md .embed { position: relative; margin: 1em 0; padding: 0.1em 0 0.1em 1em; border-left: 2px solid var(--pv-border); }
+.md .embed-title {
+  position: absolute; top: 0; right: 0; z-index: 1; padding: 0 0.2em 0 0.6em; font-size: 0.75em; line-height: 1.6;
+  background: var(--pv-bg); opacity: 0; transition: opacity 0.15s;
+}
+.md .embed:hover > .embed-title, .md .embed-title:focus-within { opacity: 1; }
+@media (hover: none) { .md .embed-title { opacity: 0.75; } }
+.md .embed-title a { color: var(--pv-muted); text-decoration: none; }
+.md .embed-title a::after { content: ' ↗'; }
+.md .embed-title a:hover { color: var(--pv-link); }
+.md .embed-body > :first-child { margin-top: 0; }
+.md .embed-body > :last-child { margin-bottom: 0; }
+.md .embed-missing { color: var(--pv-muted); font-style: italic; }
 .md mark { background: var(--pv-mark); color: inherit; padding: 0 2px; border-radius: 2px; }
 .md ins { text-decoration: underline; text-decoration-color: var(--pv-tip); }
 .md .spoiler, .md span.spoiler { background: var(--pv-text); color: transparent; border-radius: 3px; cursor: pointer; transition: color .15s; }

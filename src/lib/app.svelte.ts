@@ -149,8 +149,17 @@ class App {
     requestAnimationFrame(() => setTimeout(() => this.revealLine(line, sel), 60));
   }
 
-  /** [[target]] -> path: exact path, then same folder, then any file with that name. */
+  /** [[target]] -> path: exact path, then same folder, then any file with that name. Attachments (pic.png) too. */
   resolveWiki(target: string, fromDoc: string): string | null {
+    if (/\.[a-z0-9]+$/i.test(target.trim()) && !isMarkdown(target.trim())) {
+      const t = target.trim().toLowerCase();
+      const files = this.entries.filter((e) => e.kind === 'file').map((e) => e.path);
+      const hit =
+        files.find((p) => p.toLowerCase() === t) ??
+        files.find((p) => p.toLowerCase() === join(dirname(fromDoc), t).toLowerCase()) ??
+        files.find((p) => basename(p).toLowerCase() === basename(t));
+      if (hit) return hit; // else maybe a note with a dot in its name ("Release 1.2")
+    }
     const t = target.trim().replace(/\.(md|markdown)$/i, '').toLowerCase();
     if (!t) return null;
     const files = this.entries.filter((e) => e.kind === 'file' && isMarkdown(e.path)).map((e) => e.path);
@@ -161,6 +170,11 @@ class App {
       files.find((p) => stem(basename(p)) === basename(t)) ??
       null
     );
+  }
+
+  /** One file's text (open buffer wins over disk). */
+  readText(path: string): Promise<string> {
+    return path in this.texts ? Promise.resolve(this.texts[path]) : fs.read(path).catch(() => '');
   }
 
   /** Every markdown file's text (open buffers win over disk). */

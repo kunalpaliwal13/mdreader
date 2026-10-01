@@ -65,7 +65,8 @@ npm run build && npm test                        # smoke tests against dist/
 | Commands | `⌘/Ctrl+Shift+P`, or `⌘/Ctrl+P` then type `>` |
 | Search all files | `⌘/Ctrl+Shift+F` or the Search tab; toggles for case / whole word / regex (`Alt+C/W/R`), context lines, include / exclude globs (`notes/**, *.md`); Enter opens the top hit, `↑/↓` walk results |
 | Outline & backlinks | Outline tab in the sidebar |
-| Link notes | `[[note]]` or `[[note\|label]]`; type `[[` for suggestions; clicking a missing note creates it |
+| Link notes | `[[note]]` or `[[note\|label]]`; `[[note#Heading]]` jumps to a heading; type `[[` (or `[[note#`) for suggestions; clicking a missing note creates it; hover a link to preview the note |
+| Embed | `![[note]]` or `![[note#Heading]]` shows that note or section inline; `![[pic.png\|300]]` / `![alt\|300](pic.png)` set an image's width |
 | Resize split | Drag the divider; double-click resets |
 | Install / offline | Browser's install button (or command palette → Install); works offline after first visit |
 | Sidebar | `⌘/Ctrl+\`; tree supports arrow keys, Enter, F2, Delete |

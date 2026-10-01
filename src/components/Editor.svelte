@@ -17,6 +17,7 @@
   import { tags as t } from '@lezer/highlight';
   import { autocompletion, type CompletionContext } from '@codemirror/autocomplete';
   import { isMarkdown, basename, dirname } from '../lib/fs';
+  import { mdHeadings } from '../lib/headings';
   import { app, editorStates } from '../lib/app.svelte';
 
   let { path }: { path: string } = $props();
@@ -68,10 +69,27 @@
     return true;
   };
 
+  // picking a suggestion reuses the ]] that auto-pair may already have typed instead of doubling it
+  const closeWith = (label: string) => (view: EditorView, _c: unknown, from: number, to: number) => {
+    const end = view.state.sliceDoc(to, to + 2) === ']]' ? to + 2 : to;
+    view.dispatch({ changes: { from, to: end, insert: label + ']]' }, selection: { anchor: from + label.length + 2 } });
+  };
+
+  // [[note# -> that note's headings ([[# -> this one's)
+  async function headingComplete(note: string, from: number, ctx: CompletionContext) {
+    const target = note.trim() ? app.resolveWiki(note, current) : current;
+    if (!target) return null;
+    const text = target === current ? ctx.state.doc.toString() : await app.readText(target);
+    const options = mdHeadings(text).map((h) => ({ label: h.text, detail: 'H' + h.level, type: 'text', apply: closeWith(h.text) }));
+    return { from, options, validFor: /^[^\]|\n#]*$/ };
+  }
+
   // [[ -> workspace file names
   function wikiComplete(ctx: CompletionContext) {
     const m = ctx.matchBefore(/\[\[[^\]|\n]*$/);
     if (!m) return null;
+    const hash = m.text.indexOf('#');
+    if (hash >= 0) return headingComplete(m.text.slice(2, hash), m.from + hash + 1, ctx);
     const options = app.entries
       .filter((e) => e.kind === 'file' && isMarkdown(e.path) && e.path !== current)
       .map((e) => {
@@ -80,12 +98,7 @@
           label,
           detail: dirname(e.path),
           type: 'text',
-          // auto-pair may already have typed the closing ]]: reuse it instead of doubling
-          apply: (view: EditorView, _c: unknown, from: number, to: number) => {
-            const closed = view.state.sliceDoc(to, to + 2) === ']]';
-            const end = closed ? to + 2 : to;
-            view.dispatch({ changes: { from, to: end, insert: label + ']]' }, selection: { anchor: from + label.length + 2 } });
-          },
+          apply: closeWith(label),
         };
       });
     return { from: m.from + 2, options, validFor: /^[^\]|\n]*$/ };

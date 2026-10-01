@@ -1,5 +1,6 @@
 import DOMPurify from 'dompurify';
-import { fs, resolveRel, isImage } from './fs';
+import { fs, resolveRel, isImage, basename } from './fs';
+import { headingKey, splitTarget } from './headings';
 
 // heavy renderers load only when a document needs them
 let katexP: Promise<typeof import('katex').default> | null = null;
@@ -136,9 +137,113 @@ export type RenderOpts = {
   docPath: string;
   dark: boolean;
   forExport?: boolean;
-  /** [[wikilink]] target -> workspace path, or null when no such file exists */
-  resolveWiki?: (target: string) => string | null;
+  /** [[wikilink]] target -> workspace path (resolved from the document `from`), or null when no such file exists */
+  resolveWiki?: (target: string, from: string) => string | null;
+  /** a workspace file's text, for ![[embeds]]; without it embeds are plain links */
+  readNote?: (path: string) => Promise<string>;
+  /** "path#heading" of the embeds being rendered around this one (cycle + depth guard) */
+  chain?: string[];
 };
+
+// ---- ![[embeds]]: notes, note sections and images (comrak leaves the syntax as text) ----
+const EMBED = /!\[\[([^\]\n]+)\]\]/g;
+const MAX_DEPTH = 3;
+// finished embed bodies (images + diagrams filled in), cloned on reuse so typing in the host doesn't flicker
+const embedCache = new Map<string, HTMLElement>();
+
+function wikiAnchor(target: string) {
+  const a = document.createElement('a');
+  a.dataset.wikilink = 'true';
+  a.setAttribute('href', encodeURIComponent(target));
+  a.textContent = target;
+  return a; // resolved + labelled by the wikilink pass below
+}
+
+/** The heading matching `heading` and everything up to the next heading of the same or higher level. */
+export function section(root: HTMLElement, parsed: Parsed, heading: string): Node[] | null {
+  if (!heading) return [...root.childNodes];
+  const h = parsed.headings.find((x) => headingKey(x.text) === headingKey(heading));
+  const start = h && root.querySelector(`[id="user-content-${CSS.escape(h.id)}"]`)?.closest('h1, h2, h3, h4, h5, h6');
+  if (!start) return null;
+  const out: Node[] = [start];
+  for (let n = start.nextSibling; n; n = n.nextSibling) {
+    if (/^H[1-6]$/.test((n as Element).tagName ?? '') && +(n as Element).tagName[1] <= +start.tagName[1]) break;
+    out.push(n);
+  }
+  return out;
+}
+
+async function fillEmbed(box: HTMLElement, path: string, heading: string, key: string, opts: RenderOpts) {
+  const text = await opts.readNote!(path);
+  const ck = [path, heading, opts.dark, !!opts.forExport, text].join('\0');
+  const hit = embedCache.get(ck);
+  if (hit) return void box.append(hit.cloneNode(true));
+  const sub = await renderToElement(text, { ...opts, docPath: path, chain: [...(opts.chain ?? [opts.docPath + '#']), key] });
+  const body = document.createElement('div');
+  body.className = 'embed-body';
+  const nodes = section(sub.el, sub.parsed, heading);
+  if (nodes) body.append(...nodes);
+  else body.append(Object.assign(document.createElement('p'), { className: 'embed-missing', textContent: `No heading “${heading}” in this note` }));
+  // the host owns line numbers (scroll sync, task toggles) and ids (#anchors)
+  for (const n of body.querySelectorAll('[data-sourcepos], [id]')) n.removeAttribute('data-sourcepos'), n.removeAttribute('id');
+  box.append(body);
+  sub.pending.then(() => {
+    embedCache.set(ck, body.cloneNode(true) as HTMLElement);
+    if (embedCache.size > 40) embedCache.delete(embedCache.keys().next().value!);
+  });
+}
+
+function embedNode(raw: string, opts: RenderOpts, jobs: Promise<void>[]): Node {
+  const [name, size = ''] = raw.split('|'); // ![[pic.png|300]] / ![[pic.png|300x200]]; a note alias is ignored
+  const [note, heading] = splitTarget(name);
+  const path = note ? (opts.resolveWiki?.(note, opts.docPath) ?? null) : opts.docPath;
+  if (path && isImage(path)) {
+    const img = document.createElement('img');
+    img.alt = basename(path);
+    img.dataset.asset = path;
+    const m = /^(\d+)(?:x(\d+))?$/.exec(size.trim());
+    if (m) (img.width = +m[1]), m[2] && (img.height = +m[2]);
+    return img;
+  }
+  const key = `${path}#${headingKey(heading)}`;
+  const chain = opts.chain ?? [opts.docPath + '#'];
+  if (!path || !opts.readNote || chain.includes(key) || chain.length > MAX_DEPTH) return wikiAnchor(name.trim());
+  const box = document.createElement('div');
+  box.className = 'embed';
+  if (!opts.forExport) {
+    const title = document.createElement('div');
+    title.className = 'embed-title';
+    title.append(wikiAnchor(name.trim()));
+    box.append(title);
+  }
+  jobs.push(fillEmbed(box, path, heading, key, opts).catch(() => {}));
+  return box;
+}
+
+async function embeds(el: HTMLElement, opts: RenderOpts) {
+  const texts: Text[] = [];
+  const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let n: Node | null; (n = walk.nextNode()); )
+    if (n.nodeValue!.includes('![[') && !n.parentElement!.closest('code, pre, a, [data-math-style]')) texts.push(n as Text);
+  const jobs: Promise<void>[] = [];
+  for (const node of texts) {
+    const s = node.nodeValue!;
+    const parts: (string | Node)[] = [];
+    let last = 0;
+    for (const m of s.matchAll(EMBED)) parts.push(s.slice(last, m.index), embedNode(m[1], opts, jobs)), (last = m.index! + m[0].length);
+    if (!parts.length) continue;
+    parts.push(s.slice(last));
+    const p = node.parentElement!;
+    node.replaceWith(...parts);
+    // a paragraph that is just one note embed becomes the embed (block-level, keeps the line for scroll sync)
+    const only = [...p.childNodes].filter((c) => c.nodeType !== 3 || c.nodeValue!.trim());
+    if (p.tagName === 'P' && only.length === 1 && (only[0] as Element).classList?.contains('embed')) {
+      keepPos(p, only[0] as Element);
+      p.replaceWith(only[0]);
+    }
+  }
+  await Promise.all(jobs);
+}
 
 const keepPos = (from: Element, to: Element) => {
   const pos = from.getAttribute('data-sourcepos');
@@ -166,6 +271,8 @@ export async function renderToElement(md: string, opts: RenderOpts): Promise<{ e
     const wikiToc = only?.dataset.wikilink && /^toc$/i.test(decodeURIComponent(only.getAttribute('href') ?? ''));
     if (wikiToc || /^\s*\[(\[toc\]|toc)\]\s*$/i.test(p.textContent ?? '')) p.replaceWith(toc(parsed.headings));
   }
+
+  await embeds(el, opts);
 
   // math: inline spans and display blocks (```math or $$)
   const maths = el.querySelectorAll<HTMLElement>('[data-math-style], pre[lang="math"]');
@@ -214,10 +321,13 @@ export async function renderToElement(md: string, opts: RenderOpts): Promise<{ e
     }
   }
 
-  // relative images -> OPFS blob URLs
+  // relative images -> OPFS blob URLs; ![alt|300](src) sets the width (Obsidian syntax)
   for (const img of el.querySelectorAll('img')) {
+    const size = /\|(\d+)(?:x(\d+))?$/.exec(img.alt);
+    if (size) (img.alt = img.alt.slice(0, size.index)), (img.width = +size[1]), size[2] && (img.height = +size[2]);
     const src = img.getAttribute('src') ?? '';
-    const path = resolveRel(opts.docPath, src);
+    const path = img.dataset.asset ?? resolveRel(opts.docPath, src);
+    delete img.dataset.asset;
     if (path && isImage(path) && blobs.has(path)) img.src = blobs.get(path)!;
     else if (path && isImage(path)) {
       jobs.push(
@@ -230,14 +340,19 @@ export async function renderToElement(md: string, opts: RenderOpts): Promise<{ e
     img.loading = 'lazy';
   }
 
-  // [[wikilinks]]: point at the matching workspace file, or mark as not-yet-created
+  // [[wikilinks]] and [[note#Heading]]: point at the matching workspace file, or mark as not-yet-created
   for (const a of el.querySelectorAll<HTMLAnchorElement>('a[data-wikilink]')) {
+    if (a.dataset.target !== undefined) continue; // inside an embed: already done by its own render
     const target = decodeURIComponent(a.getAttribute('href') ?? '');
-    const path = opts.resolveWiki?.(target) ?? null;
-    a.dataset.target = target;
+    const [note, heading] = splitTarget(target);
+    const path = note ? (opts.resolveWiki?.(note, opts.docPath) ?? null) : opts.docPath;
+    a.dataset.target = note;
+    if (heading) a.dataset.heading = heading;
+    if (a.textContent === target) a.textContent = note && heading ? `${note} › ${heading}` : note || heading;
     if (path) a.dataset.path = path;
     else a.classList.add('wikilink-missing');
-    a.setAttribute('href', path ? encodeURI(path) : '#');
+    const own = !note && parsed.headings.find((h) => headingKey(h.text) === headingKey(heading));
+    a.setAttribute('href', own ? `#user-content-${own.id}` : path ? encodeURI(path) : '#');
   }
 
   // external links open in a new tab; #frag points at the prefixed heading id when that's what exists

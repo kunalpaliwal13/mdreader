@@ -6,6 +6,19 @@ const ready = async (page: Page) => {
   await page.goto('/');
   await expect(preview(page).locator('h1').first()).toHaveText(/Welcome/);
 };
+const paste = (page: Page, text: string) =>
+  page.locator('.cm-content').evaluate((el, t) => {
+    const dt = new DataTransfer();
+    dt.setData('text/plain', t);
+    const e = new ClipboardEvent('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(e, 'clipboardData', { value: dt });
+    el.dispatchEvent(e);
+  }, text);
+const replaceDoc = async (page: Page, text: string) => {
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await paste(page, text);
+};
 const create = async (page: Page, kind: 'file' | 'folder', name: string) => {
   await page.getByRole('button', { name: kind === 'file' ? 'New file' : 'New folder' }).click();
   await page.locator('.row input.rename').fill(name);
@@ -70,4 +83,41 @@ test('search: case / word / regex, name matches, context, globs, Enter opens the
   await q.press('Enter');
   await expect(page.locator('.status')).toContainText('Ln 3, Col 5');
   await expect(page.locator('.cm-activeLine')).toContainText('beta fib');
+});
+
+test('linking: [[note#Heading]], ![[embeds]] of notes and sections, image sizes, hover preview, heading autocomplete', async ({ page }) => {
+  await ready(page);
+  await create(page, 'file', 'Other');
+  await replaceDoc(page, '# Other\n\nIntro.\n\n## Plan\n\n- step one\n\n## Later\n\nNot in plan.\n');
+  await page.locator('.tree .row', { hasText: 'Welcome' }).click();
+  await replaceDoc(page, '# Host\n\nSee [[Other#Plan]] here.\n\n![[Other#Plan]]\n\n![[Welcome]]\n\n![alt|120](missing.png)\n');
+
+  const pv = preview(page);
+  const embed = pv.locator('.embed');
+  await expect(embed).toHaveCount(1); // the self-embed stays a link
+  await expect(embed.locator('h2')).toHaveText('Plan');
+  await expect(embed).toContainText('step one');
+  await expect(embed).not.toContainText('Not in plan');
+  await expect(pv.locator('p > a[data-wikilink]', { hasText: 'Welcome' })).toHaveAttribute('data-path', 'Welcome.md');
+  await expect(pv.locator('img[alt="alt"]')).toHaveAttribute('width', '120');
+
+  // hover a heading link: the popover shows just that section
+  const link = pv.locator('p a[data-wikilink]', { hasText: 'Other › Plan' });
+  await link.hover();
+  const pop = page.getByRole('tooltip');
+  await expect(pop).toContainText('step one');
+  await expect(pop).not.toContainText('Not in plan');
+
+  // clicking opens the note at the heading
+  await link.click();
+  await expect(page.getByRole('tab', { name: 'Other' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.status')).toContainText('Ln 5,');
+
+  // [[note# suggests that note's headings
+  await page.locator('.tree .row', { hasText: 'Welcome' }).click();
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('\n[[Other#');
+  await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('Plan');
+  await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('Later');
 });

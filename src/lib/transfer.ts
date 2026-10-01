@@ -116,7 +116,14 @@ function previewClasses() {
 
 /** Self-contained HTML: rendered content + preview CSS; local images inlined. */
 async function standaloneHtml(path: string, forPrint: boolean): Promise<string> {
-  const { el, pending } = await renderToElement(app.texts[path] ?? (await fs.read(path)), { docPath: path, dark: false, forExport: true });
+  // embeds are inlined, so the exported page stands alone
+  const { el, pending } = await renderToElement(await app.readText(path), {
+    docPath: path,
+    dark: false,
+    forExport: true,
+    resolveWiki: (t, from) => app.resolveWiki(t, from),
+    readNote: (p) => app.readText(p),
+  });
   await pending;
   for (const img of el.querySelectorAll('img')) {
     if (img.src.startsWith('blob:')) img.src = await toDataUrl(img.src);

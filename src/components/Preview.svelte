@@ -3,6 +3,8 @@
   import { renderToElement } from '../lib/render';
   import { onMount } from 'svelte';
   import { resolveRel, isMarkdown, dirname } from '../lib/fs';
+  import { mdHeadings, headingKey } from '../lib/headings';
+  import PagePreview from './PagePreview.svelte';
 
   let { path, text }: { path: string; text: string } = $props();
   let article: HTMLElement;
@@ -19,10 +21,12 @@
       const { el, parsed } = await renderToElement(job.text, {
         docPath: job.path,
         dark: job.dark,
-        resolveWiki: (t) => app.resolveWiki(t, job.path),
+        resolveWiki: (t, from) => app.resolveWiki(t, from),
+        readNote: (p) => app.readText(p),
       });
       app.headings = parsed.headings;
-      el.querySelectorAll('input[type=checkbox]').forEach((i) => i.removeAttribute('disabled'));
+      // tasks are clickable, except inside embeds (those lines belong to another note)
+      el.querySelectorAll('input[type=checkbox]').forEach((i) => i.closest('.embed') || i.removeAttribute('disabled'));
       article.replaceChildren(...el.childNodes);
       reapplyFolds(job.path);
       if (job.path !== lastPath) scroller.scrollTop = 0;
@@ -111,6 +115,46 @@
       a.classList.toggle('folded', foldedAlerts.has(p + '@' + parseInt(a.dataset.sourcepos!)));
   };
 
+  /** Open a [[wikilink]] (at its heading, if any); a link to a missing note creates it, Obsidian-style. */
+  async function follow(a: HTMLAnchorElement, from: string) {
+    hover = null;
+    const to = a.dataset.path;
+    if (!to) {
+      if (!a.dataset.wikilink) return;
+      const name = (a.dataset.target || 'Untitled').replace(/[\\:*?"<>|]/g, '-');
+      return app.createFile(dirname(from), name.endsWith('.md') ? name : name + '.md', `# ${name}\n\n`).then(() => (app.renaming = null));
+    }
+    const h = a.dataset.heading;
+    const line = h ? mdHeadings(await app.readText(to)).find((x) => headingKey(x.text) === headingKey(h))?.line : undefined;
+    if (line) app.openAt(to, line);
+    else if (isMarkdown(to)) app.open(to);
+  }
+
+  // ---- hover page preview (pointer devices only) ----
+  const canHover = matchMedia('(hover: hover)').matches;
+  let hover = $state<{ path: string; heading: string; rect: DOMRect } | null>(null);
+  let showT: ReturnType<typeof setTimeout> | undefined, hideT: ReturnType<typeof setTimeout> | undefined;
+  const hideSoon = () => (clearTimeout(showT), (hideT = setTimeout(() => (hover = null), 150)));
+
+  function linkTarget(a: HTMLAnchorElement): { path: string; heading: string } | null {
+    if (a.dataset.wikilink) return a.dataset.path && isMarkdown(a.dataset.path) ? { path: a.dataset.path, heading: a.dataset.heading ?? '' } : null;
+    const t = resolveRel(path, a.getAttribute('href') ?? '');
+    return t && isMarkdown(t) && app.entries.some((x) => x.path === t) ? { path: t, heading: '' } : null;
+  }
+  function onOver(e: MouseEvent) {
+    const a = (e.target as HTMLElement).closest('a');
+    if (!canHover || !a || a.contains(e.relatedTarget as Node)) return;
+    const t = linkTarget(a);
+    if (!t) return;
+    clearTimeout(hideT);
+    clearTimeout(showT);
+    showT = setTimeout(() => (hover = { ...t, rect: a.getBoundingClientRect() }), hover ? 80 : 350);
+  }
+  function onOut(e: MouseEvent) {
+    const a = (e.target as HTMLElement).closest('a');
+    if (a && !a.contains(e.relatedTarget as Node)) hideSoon();
+  }
+
   function onClick(e: MouseEvent) {
     const t = e.target as HTMLElement;
     const title = t.closest('.markdown-alert-title');
@@ -122,7 +166,7 @@
       alert.classList.toggle('folded');
       return;
     }
-    if (t instanceof HTMLInputElement && t.type === 'checkbox') {
+    if (t instanceof HTMLInputElement && t.type === 'checkbox' && !t.closest('.embed')) {
       e.preventDefault();
       return toggleTask(t);
     }
@@ -139,13 +183,7 @@
     if (!a || !href) return;
     if (a.dataset.wikilink) {
       e.preventDefault();
-      if (a.dataset.path) app.open(a.dataset.path);
-      else {
-        // Obsidian-style: following a link to a missing note creates it
-        const name = (a.dataset.target ?? 'Untitled').replace(/[\\:*?"<>|]/g, '-');
-        app.createFile(dirname(path), name.endsWith('.md') ? name : name + '.md', `# ${name}\n\n`).then(() => (app.renaming = null));
-      }
-      return;
+      return follow(a, path);
     }
     if (href.startsWith('#')) {
       e.preventDefault();
@@ -162,8 +200,9 @@
   }
 </script>
 
-<div class="scroller" bind:this={scroller} onscroll={() => requestAnimationFrame(onScroll)}>
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+<div class="scroller" bind:this={scroller} onscroll={() => ((hover = null), requestAnimationFrame(onScroll))}>
+  <!-- hover preview is a pointer convenience; keyboard users follow links with Enter -->
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions, a11y_mouse_events_have_key_events -->
   <article
     bind:this={article}
     class="md preset-{app.settings.preset}"
@@ -172,8 +211,13 @@
     class:font-mono={app.settings.font === 'mono'}
     style="--pv-size:{app.settings.size}px;--pv-width:{app.settings.width}px"
     onclick={onClick}
+    onmouseover={onOver}
+    onmouseout={onOut}
   ></article>
 </div>
+{#if hover}
+  <PagePreview {...hover} onenter={() => clearTimeout(hideT)} onleave={hideSoon} onlink={follow} />
+{/if}
 
 <style>
   /* preview keeps its preset colors whatever the app scheme is */

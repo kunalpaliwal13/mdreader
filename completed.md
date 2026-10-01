@@ -61,6 +61,9 @@
 - [x] Search like ripgrep: match case / whole word / regex toggles (`Alt+C` / `Alt+W` / `Alt+R`), every match
       highlighted, one line of context on demand, file and folder names matched too, include / exclude globs
       (with a "filtered" reminder when they're tucked away), Enter opens the top hit with the match selected
+- [x] Linking: `[[note#Heading]]` opens at the heading (`[[#Heading]]` within the note), `[[note#` suggests
+      headings; `![[note]]` / `![[note#Heading]]` embed a note or one section (loops and depth guarded, inlined in
+      exports); `![[pic.png|300]]` and `![alt|300](pic.png)` size images; hovering a note link previews it
 
 ## Later
 
