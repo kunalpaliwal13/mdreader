@@ -30,6 +30,12 @@ yet — click it in the preview to create it. Type `[[` in the editor to autocom
 `![[note#Heading]]` embeds another note or one section of it, and hovering a note link previews it.
 Tags like #ideas or #reading/books group notes — click one, or open **Search** with nothing typed to see them all.
 
+## Daily notes & templates
+
+The calendar icon in the sidebar opens today's note (`Daily/YYYY-MM-DD.md`). Notes in a `Templates/` folder show
+up in the `/` menu and the command palette, with `{{date}}`, `{{time}}`, `{{title}}` and `{{cursor}}` filled in;
+a `Templates/Daily.md` shapes every new daily note.
+
 ## Lists
 
 - Unordered item

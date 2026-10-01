@@ -157,3 +157,43 @@ test('tags: preview pills + editor tint, front matter tags, tag list in empty se
   await page.keyboard.type(' #pro');
   await expect(page.locator('.cm-tooltip-autocomplete')).toContainText('project/web');
 });
+
+test('daily note + templates: calendar icon, Templates/Daily.md, slash menu and palette', async ({ page }) => {
+  await ready(page);
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  await create(page, 'folder', 'Templates');
+  await page.locator('.row[data-path="Templates"]').click();
+  await create(page, 'file', 'Daily');
+  await replaceDoc(page, '# {{date}}\n\nPlan:\n');
+  await create(page, 'file', 'Meeting');
+  await replaceDoc(page, 'Meeting on {{date}} in {{title}}\nAttendees: {{cursor}}\n');
+  await expect(page.locator('.row[data-path="Templates/Meeting.md"]')).toHaveCount(1);
+
+  // today's note comes from Templates/Daily.md
+  await page.getByRole('button', { name: "Today's note" }).click();
+  await expect(page.getByRole('tab', { name: today })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.row[data-path="Daily/' + today + '.md"]')).toHaveCount(1);
+  await expect(preview(page).locator('h1')).toHaveText(today);
+
+  // templates in the slash menu: variables filled, caret at {{cursor}}
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('\n/meet');
+  await expect(page.locator('.cm-tooltip-autocomplete li[aria-selected]')).toContainText('Meeting template'); // best match first
+  await page.waitForTimeout(150); // CodeMirror ignores Enter right after the list opens
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Ann');
+  await expect(page.locator('.cm-content')).toContainText(`Meeting on ${today} in ${today}`);
+  await expect(page.locator('.cm-content')).toContainText('Attendees: Ann');
+
+  // and in the palette
+  await page.keyboard.press('ControlOrMeta+Shift+p');
+  await page.getByLabel('Palette query').fill('>insert template');
+  await expect(page.getByRole('option', { name: /Insert template: Meeting/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // a second click opens the same note instead of making another
+  await page.getByRole('button', { name: "Today's note" }).click();
+  await expect(page.locator('.row[data-path^="Daily/"]')).toHaveCount(1);
+});

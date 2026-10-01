@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     FilePlus, FolderPlus, Import, Search, Trash, Settings as SettingsIcon, PanelLeftClose, X,
-    Pencil, Copy, FileDown, Archive, FileText, FolderUp, FileArchive, FolderTree, TextSearch, ListTree,
+    Pencil, Copy, FileDown, Archive, FileText, FolderUp, FileArchive, FolderTree, TextSearch, ListTree, CalendarDays,
   } from '@lucide/svelte';
   import TreeNode, { type TreeCtx } from './TreeNode.svelte';
   import TrashPanel from './TrashPanel.svelte';
@@ -188,6 +188,7 @@
     <div class="actions">
       <button class="icon-btn" title="New file" aria-label="New file" onclick={() => app.createFile(targetDir())}><FilePlus size={15} /></button>
       <button class="icon-btn" title="New folder" aria-label="New folder" onclick={() => app.createFolder(targetDir())}><FolderPlus size={15} /></button>
+      <button class="icon-btn" title="Today's note" aria-label="Today's note" onclick={() => app.openDaily()}><CalendarDays size={15} /></button>
       <button class="icon-btn" title="Import / export" aria-label="Import" onclick={importMenu}><Import size={15} /></button>
       <button class="icon-btn" title="Hide sidebar (⌘\)" aria-label="Hide sidebar" onclick={() => ((app.settings.sidebar = false), app.saveSettings())}><PanelLeftClose size={15} /></button>
     </div>

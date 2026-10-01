@@ -1,8 +1,8 @@
 // "/" at the start of a line (or after a space) opens a block menu. Part of smart typing, so Plain turns it off.
 import { snippet, type Completion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
-
-const today = () => new Date().toISOString().slice(0, 10);
-const now = () => new Date().toTimeString().slice(0, 5);
+import { app } from '../app.svelte';
+import { basename } from '../fs';
+import { templateFiles, fill, localDate as today, localTime as now } from '../templates';
 
 type Item = { label: string; detail: string; section: string; tpl: string | (() => string) };
 
@@ -48,6 +48,23 @@ const completions: Completion[] = ITEMS.map((it, i) => ({
   },
 }));
 
+// files in Templates/ join the menu in their own section
+const templates = (): Completion[] =>
+  templateFiles(app.entries).map((path, i) => ({
+    label: basename(path).replace(/\.(md|markdown|mdx|txt)$/i, '') + ' template',
+    detail: 'Templates/',
+    type: 'keyword',
+    boost: -i,
+    section: { name: 'Templates', rank: SECTIONS.length },
+    apply: (view, _c, from, to) => {
+      const title = basename(app.active ?? '').replace(/\.(md|markdown|mdx|txt)$/i, '');
+      app.readText(path).then((t) => {
+        const { text, cursor } = fill(t, title);
+        view.dispatch({ changes: { from: from - 1, to, insert: text }, selection: { anchor: from - 1 + cursor }, userEvent: 'input' });
+      });
+    },
+  }));
+
 export function slashComplete(ctx: CompletionContext): CompletionResult | null {
   const m = ctx.matchBefore(/(?:^|\s)\/[\w ’'-]*$/);
   if (!m) return null;
@@ -55,6 +72,10 @@ export function slashComplete(ctx: CompletionContext): CompletionResult | null {
   const query = m.text.slice(slash + 1);
   // a space right after "/" (or two words in) means the user is just typing prose
   if (/^\s|\s\s/.test(query)) return null;
-  // match the query after "/" so fuzzy filtering ignores the slash itself
-  return { from: m.from + slash + 1, options: completions, filter: true, validFor: /^[\w ’'-]*$/ };
+  // grouped while browsing; once there's a query the best match wins (sections would pin Text items above a
+  // better match further down, e.g. "/meet" -> Numbered list over Meeting template)
+  const all = [...completions, ...templates()];
+  const options = query ? all.map(({ section: _, ...c }) => c) : all;
+  // match the query after "/" so fuzzy filtering ignores the slash itself; re-query when it becomes (non-)empty
+  return { from: m.from + slash + 1, options, filter: true, validFor: (t) => !t === !query && /^[\w ’'-]*$/.test(t) };
 }

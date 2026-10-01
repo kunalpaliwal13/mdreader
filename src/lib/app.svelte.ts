@@ -6,6 +6,7 @@ import { fs, dirname, basename, join, isMarkdown, type Entry, type TrashEntry } 
 import { invalidateAsset, type Heading } from './render';
 import welcome from './welcome.md?raw';
 import { tagsOf } from './tags';
+import { templateFiles, fill, localDate, DAILY, TEMPLATES } from './templates';
 
 export type Mode = 'edit' | 'split' | 'preview';
 export type Settings = {
@@ -178,6 +179,35 @@ class App {
   /** One file's text (open buffer wins over disk). */
   readText(path: string): Promise<string> {
     return path in this.texts ? Promise.resolve(this.texts[path]) : fs.read(path).catch(() => '');
+  }
+
+  /** Today's note (Daily/YYYY-MM-DD.md), created from Templates/Daily.md when there is one. */
+  async openDaily() {
+    const date = localDate();
+    const path = `${DAILY}/${date}.md`;
+    if (!this.entries.some((e) => e.path === path)) {
+      const tpl = templateFiles(this.entries).find((p) => basename(p).toLowerCase() === 'daily.md');
+      const content = tpl ? fill(await this.readText(tpl), date).text : `# ${date}\n\n`;
+      if (!(await this.op(async () => (await fs.write(path, content), true)))) return;
+      this.expanded.add(DAILY);
+      this.saveExpanded();
+    }
+    await this.open(path);
+  }
+
+  /** Insert a Templates/ file at the cursor of the open note. */
+  async insertTemplate(tpl: string) {
+    const { text, cursor } = fill(await this.readText(tpl), basename(this.active ?? '').replace(/\.(md|markdown|mdx|txt)$/i, ''));
+    this.runEditor?.((v) => {
+      const { from, to } = v.state.selection.main;
+      v.dispatch({ changes: { from, to, insert: text }, selection: { anchor: from + cursor }, scrollIntoView: true, userEvent: 'input' });
+      return true;
+    });
+  }
+
+  /** A starter template in Templates/, named in place. */
+  newTemplate() {
+    return this.createFile(TEMPLATES, 'Template.md', '# {{title}}\n\nCreated {{date}} {{time}}\n\n{{cursor}}\n');
   }
 
   /** Search the workspace from anywhere (tag pills, palette). */

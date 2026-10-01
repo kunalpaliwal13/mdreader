@@ -7,6 +7,7 @@
   import { foldAll, unfoldAll } from '@codemirror/language';
   import type { Command as EditorCommand } from '@codemirror/view';
   import { tableCommands } from '../lib/editor/table';
+  import { templateFiles } from '../lib/templates';
 
   type Item = { id: string; label: string; detail?: string; kbd?: string; run: () => void; score: number; marks: number[] };
 
@@ -42,6 +43,7 @@
     const cmds: Omit<Item, 'score' | 'marks'>[] = [
       { id: 'new-file', label: 'New file', run: () => app.createFile(a ? dirname(a) : '') },
       { id: 'new-folder', label: 'New folder', run: () => app.createFolder(a ? dirname(a) : '') },
+      { id: 'daily', label: "Open today's daily note", run: () => app.openDaily() },
       { id: 'preview', label: app.mode === 'preview' ? 'Back to editing' : 'Toggle preview', kbd: `${mod}E`, run: () => app.togglePreview() },
       ...(!app.narrow ? [{ id: 'split', label: 'Toggle split view', run: () => app.toggleSplit() }] : []),
       { id: 'plain', label: app.settings.plain ? 'Restore smart typing' : 'Plain editor (pause smart typing)', kbd: `${mod}⇧E`, run: () => app.togglePlain() },
@@ -64,11 +66,15 @@
                   { id: 'table-col', label: 'Add table column', run: () => app.runEditor?.(inTable(tableCommands.colRight)) },
                 ]
               : []),
+            ...(app.mode !== 'preview'
+              ? templateFiles(app.entries).map((p) => ({ id: 'tpl:' + p, label: 'Insert template: ' + basename(p).replace(/\.(md|markdown|mdx|txt)$/i, ''), run: () => app.insertTemplate(p) }))
+              : []),
             { id: 'rename', label: 'Rename current file', run: () => (showView('files'), (app.renaming = a)) },
             { id: 'close', label: 'Close tab', run: () => app.close(a) },
             { id: 'delete', label: 'Move current file to trash', run: () => app.remove([a]) },
           ]
         : []),
+      { id: 'new-template', label: 'New template', run: () => app.newTemplate() },
       { id: 'export-zip', label: 'Export workspace as ZIP', run: () => exportZip('') },
       { id: 'import-files', label: 'Import markdown files…', run: () => importPicker('files') },
       { id: 'import-folder', label: 'Import folder…', run: () => importPicker('folder') },

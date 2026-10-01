@@ -66,6 +66,9 @@
       exports); `![[pic.png|300]]` and `![alt|300](pic.png)` size images; hovering a note link previews it
 - [x] Tags: `#tag` / `#nested/tag` and front matter `tags:` — pills in the preview and a tint in the editor; click
       one to search it (a parent finds its children); empty Search lists every tag with counts; `#` suggests tags
+- [x] Daily notes + templates: calendar icon (sidebar) / palette opens `Daily/YYYY-MM-DD.md` (local date), created
+      from `Templates/Daily.md` if present; `Templates/` notes appear in the `/` menu and palette with `{{date}}`
+      `{{time}}` `{{title}}` `{{cursor}}`; slash menu now ranks the best match first once you type
 
 ## Later
 
