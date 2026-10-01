@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { EditorState, EditorSelection, type Extension } from '@codemirror/state';
-  import { EditorView, keymap, drawSelection, dropCursor, highlightActiveLine, placeholder, type Command } from '@codemirror/view';
+  import { EditorState, EditorSelection, Compartment, type Extension } from '@codemirror/state';
+  import { EditorView, keymap, drawSelection, dropCursor, highlightActiveLine, placeholder, rectangularSelection, crosshairCursor, type Command } from '@codemirror/view';
+  import { smartTyping } from '../lib/editor/smart';
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
   import { markdown, markdownLanguage, insertNewlineContinueMarkup, deleteMarkupBackward } from '@codemirror/lang-markdown';
   import { languages } from '@codemirror/language-data';
@@ -174,6 +175,10 @@
     '.cm-completionDetail': { color: 'var(--text-faint)', fontStyle: 'normal', marginLeft: '8px' },
   });
 
+  // everything the Plain toggle turns off
+  const smartC = new Compartment();
+  const smart = (): Extension[] => (app.settings.plain ? [] : smartTyping([autocompletion({ override: [wikiComplete], icons: false })]));
+
   const extensions: Extension[] = [
     history(),
     drawSelection(),
@@ -187,7 +192,10 @@
     markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: false }),
     syntaxHighlighting(highlight),
     placeholder('Start writing…'),
-    autocompletion({ override: [wikiComplete], icons: false }),
+    EditorState.allowMultipleSelections.of(true),
+    rectangularSelection(),
+    crosshairCursor(),
+    smartC.of(smart()),
     theme,
     handlers,
     keymap.of([
@@ -224,6 +232,7 @@
     current = p;
     const s = stateFor(p);
     view.setState(s);
+    view.dispatch({ effects: smartC.reconfigure(smart()) });
     const head = s.selection.main.head;
     const line = s.doc.lineAt(head);
     app.cursor = { line: line.number, col: head - line.from + 1 };
@@ -272,6 +281,11 @@
 
   $effect(() => {
     if (view && path !== current) show(path);
+  });
+
+  $effect(() => {
+    void app.settings.plain;
+    view?.dispatch({ effects: smartC.reconfigure(smart()) });
   });
 
   onDestroy(() => {

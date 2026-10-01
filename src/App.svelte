@@ -67,6 +67,9 @@
     } else if (e.key.toLowerCase() === 's' && !e.shiftKey) {
       e.preventDefault();
       app.flush().then(() => app.active && app.notify('Saved'));
+    } else if (k === 'e' && e.shiftKey && app.active) {
+      e.preventDefault();
+      app.togglePlain();
     } else if (e.key.toLowerCase() === 'e' && !e.shiftKey && app.active) {
       e.preventDefault();
       app.togglePreview();

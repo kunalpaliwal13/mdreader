@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X, PanelLeft, PenLine, Columns2, Eye, Download, FileText, FileCode, Printer, Sun, Moon } from '@lucide/svelte';
+  import { X, PanelLeft, PenLine, Columns2, Eye, Download, FileText, FileCode, Printer, Sun, Moon, Pilcrow } from '@lucide/svelte';
   import { app } from '../lib/app.svelte';
   import { openMenu } from '../lib/menu.svelte';
   import { basename, dirname } from '../lib/fs';
@@ -78,6 +78,16 @@
       >
         {#if app.mode === 'preview'}<PenLine size={14} /><span>Edit</span>{:else}<Eye size={14} /><span>Preview</span>{/if}
       </button>
+      {#if app.mode !== 'preview'}
+        <button
+          class="icon-btn"
+          class:active={app.settings.plain}
+          aria-pressed={app.settings.plain}
+          title={app.settings.plain ? 'Plain editor on — click to restore smart typing (⌘⇧E)' : 'Plain editor: pause smart typing (⌘⇧E)'}
+          aria-label="Plain editor"
+          onclick={() => app.togglePlain()}
+        ><Pilcrow size={15} /></button>
+      {/if}
     {/if}
     <button
       class="icon-btn"

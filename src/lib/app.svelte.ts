@@ -23,10 +23,12 @@ export type Settings = {
   split: number;
   /** max width of the editor's text column, px */
   editorWidth: number;
+  /** Plain editor: smart typing features (live preview, slash menu, autocomplete, auto-pair, table format) off */
+  plain: boolean;
 };
 export type SidebarView = 'files' | 'search' | 'outline';
 
-const DEFAULTS: Settings = { theme: 'system', scheme: 'default', preset: 'github', font: 'preset', size: 16, width: 760, mode: 'split', sidebar: true, sidebarWidth: 260, editMode: 'split', split: 50, editorWidth: 760 };
+const DEFAULTS: Settings = { theme: 'system', scheme: 'default', preset: 'github', font: 'preset', size: 16, width: 760, mode: 'split', sidebar: true, sidebarWidth: 260, editMode: 'split', split: 50, editorWidth: 760, plain: false };
 
 /** Animate a DOM-changing state update with the View Transitions API where available. */
 export function transition(update: () => void) {
@@ -112,6 +114,12 @@ class App {
     const next = this.mode === 'split' ? 'edit' : 'split';
     this.settings.editMode = next;
     this.setMode(next);
+  }
+
+  togglePlain() {
+    this.settings.plain = !this.settings.plain;
+    this.saveSettings();
+    this.notify(this.settings.plain ? 'Plain editor: smart typing off' : 'Smart typing on');
   }
 
   toggleTheme() {

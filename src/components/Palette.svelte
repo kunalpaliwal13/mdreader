@@ -38,6 +38,7 @@
       { id: 'new-folder', label: 'New folder', run: () => app.createFolder(a ? dirname(a) : '') },
       { id: 'preview', label: app.mode === 'preview' ? 'Back to editing' : 'Toggle preview', kbd: `${mod}E`, run: () => app.togglePreview() },
       ...(!app.narrow ? [{ id: 'split', label: 'Toggle split view', run: () => app.toggleSplit() }] : []),
+      { id: 'plain', label: app.settings.plain ? 'Restore smart typing' : 'Plain editor (pause smart typing)', kbd: `${mod}⇧E`, run: () => app.togglePlain() },
       { id: 'theme', label: app.dark ? 'Switch to light mode' : 'Switch to dark mode', run: () => app.toggleTheme() },
       { id: 'sidebar', label: 'Toggle sidebar', kbd: `${mod}\\`, run: () => ((app.settings.sidebar = !app.settings.sidebar), app.saveSettings()) },
       { id: 'search', label: 'Search in files', kbd: `${mod}⇧F`, run: () => showView('search') },

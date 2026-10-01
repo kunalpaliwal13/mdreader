@@ -16,6 +16,7 @@
 <footer class="status">
   <span class="save {app.saveState}"><i></i>{label[app.saveState]}</span>
   {#if app.active}
+    {#if app.settings.plain}<button class="chip" title="Smart typing paused — click to restore" onclick={() => app.togglePlain()}>Plain</button>{/if}
     <span class="spacer"></span>
     {#if app.mode !== 'preview' && !app.narrow}<span>Ln {app.cursor.line}, Col {app.cursor.col}</span>{/if}
     <span>{words.toLocaleString()} {words === 1 ? 'word' : 'words'}</span>
@@ -39,6 +40,7 @@
     overflow: hidden;
   }
   .spacer { flex: 1; }
+  .chip { height: 16px; padding: 0 7px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-size: 10.5px; font-weight: 600; cursor: pointer; }
   .save { display: flex; align-items: center; gap: 6px; }
   .save i { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; }
   .save.unsaved i, .save.saving i { background: #f59e0b; }
