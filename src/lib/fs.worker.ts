@@ -2,7 +2,7 @@
 // All OPFS access lives here: Safari only supports writes through
 // createSyncAccessHandle, which exists only in dedicated workers.
 
-export type Entry = { path: string; kind: 'file' | 'dir' };
+export type Entry = { path: string; kind: 'file' | 'dir'; mtime?: number };
 export type TrashEntry = { id: string; path: string; kind: 'file' | 'dir'; deletedAt: number };
 
 const TRASH = '.trash';
@@ -116,7 +116,7 @@ async function walk(d: FileSystemDirectoryHandle, prefix: string, out: Entry[]) 
     if (h.kind === 'directory') {
       out.push({ path, kind: 'dir' });
       await walk(h as FileSystemDirectoryHandle, path, out);
-    } else out.push({ path, kind: 'file' });
+    } else out.push({ path, kind: 'file', mtime: (await (h as FileSystemFileHandle).getFile()).lastModified ?? Date.now() }); // memory files have no lastModified
   }
 }
 

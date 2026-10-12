@@ -18,6 +18,7 @@
   import { buildTree, visibleRows, type TreeNode as Node } from '../lib/tree';
   import { dirname, basename } from '../lib/fs';
   import { importPicker, importDrop, hasFiles, exportZip, exportMd } from '../lib/transfer';
+  import { SvelteSet } from 'svelte/reactivity';
 
   let dropTarget = $state<string | null>(null);
   let dragging: string[] = [];
@@ -25,7 +26,32 @@
   const tree = $derived(buildTree(app.entries, app.filter));
   const filtering = $derived(app.filter.trim().length > 0);
   const isOpen = (p: string) => filtering || app.expanded.has(p);
-  const rows = $derived(visibleRows(tree, isOpen));
+
+  // loose files at the top level are grouped by last edit: Today, Yesterday, Previous 7/30 days, then by month
+  const DAY = 864e5;
+  function bucket(t: number) {
+    const today = new Date().setHours(0, 0, 0, 0);
+    if (t >= today) return 'Today';
+    if (t >= today - DAY) return 'Yesterday';
+    if (t >= today - 7 * DAY) return 'Previous 7 days';
+    if (t >= today - 30 * DAY) return 'Previous 30 days';
+    return new Date(t).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  }
+  const mtime = $derived(new Map(app.entries.map((e) => [e.path, e.mtime ?? 0])));
+  const groups = $derived.by(() => {
+    const g = new Map<string, Node[]>();
+    // newest first, so groups come out in date order too
+    for (const n of tree.filter((n) => n.kind === 'file').sort((a, b) => mtime.get(b.path)! - mtime.get(a.path)!)) {
+      const k = bucket(mtime.get(n.path)!);
+      g.set(k, [...(g.get(k) ?? []), n]);
+    }
+    return [...g];
+  });
+  // Today + Yesterday start open, older groups start closed; a click flips that
+  const flipped = new SvelteSet<string>();
+  const groupOpen = (k: string) => filtering || (k === 'Today' || k === 'Yesterday') !== flipped.has(k);
+  const flip = (k: string) => (flipped.has(k) ? flipped.delete(k) : flipped.add(k));
+  const rows = $derived(visibleRows([...tree.filter((n) => n.kind === 'dir'), ...groups.flatMap(([k, ns]) => (groupOpen(k) ? ns : []))], isOpen));
 
   /** Folder that new items go into: the selected folder, or the active file's folder. */
   function targetDir(): string {
@@ -307,13 +333,24 @@
       ]);
     }}
   >
-    {#each tree as node (node.path)}
+    {#each tree.filter((n) => n.kind === 'dir') as node (node.path)}
       <TreeNode {node} depth={0} {ctx} />
-    {:else}
+    {/each}
+    {#each groups as [k, nodes] (k)}
+      <button class="group-head" aria-expanded={groupOpen(k)} onclick={() => flip(k)}>
+        <span class="chev" class:open={groupOpen(k)}><ChevronRight size={12} /></span>{k}<span class="group-n">{nodes.length}</span>
+      </button>
+      {#if groupOpen(k)}
+        {#each nodes as node (node.path)}
+          <TreeNode {node} depth={0} {ctx} />
+        {/each}
+      {/if}
+    {/each}
+    {#if !tree.length}
       <div class="empty">
         {#if filtering}No files match “{app.filter}”{:else}No files yet.<br />Create one or drop files here.{/if}
       </div>
-    {/each}
+    {/if}
   </div>
   {/if}
 
@@ -388,6 +425,12 @@
   .mark-x { margin-left: auto; width: 18px; height: 18px; opacity: 0; }
   .mark:hover .mark-x, .mark:focus-within .mark-x { opacity: 1; }
   @media (pointer: coarse) { .mark { height: 38px; } .mark-x { opacity: 1; } }
+  .group-head {
+    display: flex; align-items: center; gap: 4px; width: calc(100% - 12px); margin: 6px 6px 0; padding: 2px 4px 4px; border: 0;
+    background: none; cursor: pointer; font-size: 10.5px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: .05em;
+  }
+  .group-head:hover { color: var(--text-muted); }
+  .group-n { margin-left: auto; font-weight: 400; }
   .tree { flex: 1; overflow-y: auto; padding: 2px 0 12px; outline: none; }
   .tree.drop { background: var(--accent-soft); }
   .empty { padding: 24px 16px; color: var(--text-faint); text-align: center; font-size: 12px; line-height: 1.6; }
